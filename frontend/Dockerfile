@@ -1,18 +1,18 @@
-FROM node:18-alpine
+FROM node:16-alpine
 
 WORKDIR /app
 
-# Kopiowanie plików package.json i package-lock.json
+# Kopiowanie plików konfiguracyjnych
 COPY package*.json ./
 
 # Instalacja zależności
 RUN npm install
 
-# Kopiowanie reszty kodu źródłowego
+# Kopiowanie kodu źródłowego
 COPY . .
 
 # Ekspozycja portu 3000
 EXPOSE 3000
 
-# Uruchomienie aplikacji w trybie deweloperskim
+# Uruchomienie aplikacji
 CMD ["npm", "start"]
