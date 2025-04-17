@@ -11,9 +11,17 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      # Dodanie specjalnego wolumenu dla katalogu cache
+      - frontend_cache:/app/node_modules/.cache
     environment:
       - REACT_APP_API_URL=${REACT_APP_API_URL}
       - NODE_ENV=${NODE_ENV}
+      - DISABLE_ESLINT_PLUGIN=true
+      - ESLINT_NO_DEV_ERRORS=true
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    # Dodanie użytkownika node dla lepszej kompatybilności
+    user: node
     depends_on:
       - backend
     networks:
@@ -71,3 +79,4 @@ networks:
 
 volumes:
   postgres_data:
+  frontend_cache:
