@@ -1,208 +1,202 @@
-# Panel do oceny RODO (GDPR Assessment Panel)
+# Panel Oceny RODO (GDPR Assessment Panel)
 
-## Opis projektu
+Aplikacja webowa do przeprowadzania ocen zgodności z RODO (GDPR), zarządzania ryzykiem i śledzenia działań naprawczych.
 
-Panel do oceny RODO to aplikacja webowa umożliwiająca przeprowadzanie oceny zgodności z Rozporządzeniem o Ochronie Danych Osobowych (RODO). Aplikacja pozwala użytkownikom na:
+## Funkcjonalności
 
-- Rejestrację i logowanie
-- Przeprowadzanie oceny zgodności z RODO
-- Zapisywanie i przeglądanie wyników oceny
-- Generowanie raportów z oceny
+### 1. Formularze Oceny RODO
+- Różne formaty formularzy (standardowy, kompaktowy, animowany)
+- Dynamiczne sekcje odpowiadające obszarom RODO
+- Automatyczne zapisywanie odpowiedzi
+
+### 2. System Oceny Ryzyka
+- Automatyczne obliczanie poziomu ryzyka na podstawie odpowiedzi
+- Historia ocen ryzyka z możliwością przeglądania poprzednich wyników
+- Wizualne wskaźniki zmian poziomu ryzyka
+- Szczegółowe rekomendacje działań w zależności od poziomu ryzyka
+- Eksport oceny ryzyka do pliku
+- Analiza trendów ryzyka w czasie
+
+### 3. Wizualizacje Oceny
+- Interaktywne wykresy z możliwością kliknięcia na elementy
+- Porównanie z poprzednimi ocenami (tryb porównawczy)
+- Analiza trendów w czasie dla poszczególnych obszarów
+- Różne typy wykresów (słupkowe, radarowe, liniowe, polarne)
+- Eksport wizualizacji do formatów PNG i PDF
+- Wizualne wskaźniki zmian między ocenami
+
+### 4. Działania Naprawcze
+- Zaawansowane filtrowanie i sortowanie działań naprawczych
+- Eksport listy działań do formatów CSV i PDF
+- Śledzenie historii zmian statusów
+- Zarządzanie załącznikami do działań naprawczych
+- Powiązanie działań z artykułami RODO
+- Powiadomienia o zbliżających się terminach
+- Wizualizacja postępu realizacji działań
+
+### 5. Historia Zmian
+- Wizualizacja trendów zmian w czasie dla poszczególnych obszarów
+- Szczegółowe widoki porównawcze między wersjami
+- Funkcja przywracania poprzednich wersji oceny
+- Eksport historii zmian i porównań do PDF
+- System zakładek do przełączania między różnymi widokami
+- Interaktywne wykresy z możliwością wyboru obszaru do analizy
+- Szczegółowe statystyki i podsumowania zmian
 
 ## Technologie
 
-Projekt wykorzystuje następujące technologie:
+### Frontend
+- React 18
+- React Bootstrap
+- React Router
+- Chart.js / React-Chartjs-2
+- jsPDF (eksport do PDF)
+- FontAwesome (ikony)
+- Formik i Yup (walidacja formularzy)
+- Axios (komunikacja z API)
 
-- **Frontend**: React, Material-UI
-- **Backend**: Spring Boot
-- **Baza danych**: PostgreSQL
-- **Konteneryzacja**: Docker, Docker Compose
+### Backend
+- Spring Boot
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
+
+## Instalacja i uruchomienie
+
+### Wymagania
+- Node.js 14+
+- Java 11+
+- Docker i Docker Compose
+- PostgreSQL
+
+### Uruchomienie z Docker Compose
+1. Sklonuj repozytorium:
+```
+git clone https://github.com/optiq-ai/rodo-assessment-panel.git
+cd rodo-assessment-panel
+```
+
+2. Utwórz plik `.env` z odpowiednimi zmiennymi środowiskowymi:
+```
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=rodo_assessment
+REACT_APP_API_URL=http://localhost:8080/api
+NODE_ENV=development
+```
+
+3. Uruchom aplikację za pomocą Docker Compose:
+```
+docker-compose up -d
+```
+
+4. Aplikacja będzie dostępna pod adresem:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8080/api
+
+### Uruchomienie bez Dockera
+
+#### Backend
+1. Przejdź do katalogu backend:
+```
+cd rodo-assessment-panel/backend
+```
+
+2. Zbuduj projekt:
+```
+./mvnw clean package
+```
+
+3. Uruchom aplikację:
+```
+java -jar target/rodo-assessment-0.0.1-SNAPSHOT.jar
+```
+
+#### Frontend
+1. Przejdź do katalogu frontend:
+```
+cd rodo-assessment-panel/frontend
+```
+
+2. Zainstaluj zależności:
+```
+npm install
+```
+
+3. Uruchom aplikację:
+```
+npm start
+```
 
 ## Struktura projektu
 
 ```
-gdpr-assessment-panel/
-├── frontend/             # Aplikacja React
-├── backend/              # Aplikacja Spring Boot
-├── database/             # Skrypty inicjalizacyjne bazy danych
-├── docker-compose.yml    # Konfiguracja Docker Compose
-└── .env                  # Zmienne środowiskowe
+rodo-assessment-panel/
+├── backend/                  # Aplikacja Spring Boot
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── com/
+│   │   │   │       └── rodoassessment/
+│   │   │   │           ├── config/       # Konfiguracja Spring
+│   │   │   │           ├── controller/   # Kontrolery REST
+│   │   │   │           ├── model/        # Encje JPA
+│   │   │   │           ├── repository/   # Repozytoria Spring Data
+│   │   │   │           ├── service/      # Warstwa usług
+│   │   │   │           └── filter/       # Filtry HTTP
+│   │   │   └── resources/                # Zasoby aplikacji
+│   │   └── test/                         # Testy jednostkowe
+├── frontend/                 # Aplikacja React
+│   ├── public/               # Pliki statyczne
+│   ├── src/
+│   │   ├── components/       # Komponenty React
+│   │   │   ├── assessment/   # Komponenty oceny RODO
+│   │   │   ├── dashboard/    # Komponenty dashboardu
+│   │   │   └── layout/       # Komponenty układu strony
+│   │   ├── data/             # Dane mockowe
+│   │   ├── pages/            # Strony aplikacji
+│   │   ├── services/         # Usługi API
+│   │   ├── tests/            # Testy komponentów
+│   │   ├── App.js            # Główny komponent aplikacji
+│   │   └── index.js          # Punkt wejścia aplikacji
+├── database/                 # Skrypty bazy danych
+│   ├── init-db.sql           # Skrypt inicjalizacji bazy
+│   └── create-database.sh    # Skrypt tworzenia bazy
+└── docker-compose.yml        # Konfiguracja Docker Compose
 ```
 
-## Uruchomienie projektu
+## Testowanie
 
-### Wymagania
-
-- Docker
-- Docker Compose
-
-### Instrukcja uruchomienia
-
-1. Sklonuj repozytorium:
-   ```bash
-   git clone https://github.com/optiq-ai/rodo-assessment-panel.git
-   cd rodo-assessment-panel
-   ```
-
-2. Uruchom aplikację za pomocą Docker Compose:
-   ```bash
-   docker-compose up -d
-   ```
-
-3. Aplikacja będzie dostępna pod adresem:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8080/api
-
-### Dane logowania
-
-- Login: admin
-- Hasło: admin123
-
-## Rozwiązane problemy
-
-### 1. Problem z uprawnieniami w kontenerze frontendu
-
-W oryginalnym pliku Dockerfile dla frontendu występował problem z poleceniami chmod, które powodowały zawieszenie procesu budowania. Następnie pojawiły się problemy z uprawnieniami dla ESLint, który nie mógł utworzyć katalogu cache.
-
-Po kilku próbach rozwiązania problemu z użyciem poleceń chmod, zdecydowaliśmy się na całkowicie nowe podejście, które eliminuje potrzebę używania tych poleceń:
-
-#### a) Całkowicie przeprojektowany Dockerfile dla frontendu:
-
-```dockerfile
-FROM node:16-alpine
-
-# Utworzenie użytkownika node z odpowiednimi uprawnieniami
-RUN mkdir -p /app && chown -R node:node /app
-WORKDIR /app
-
-# Przełączenie na użytkownika node
-USER node
-
-# Kopiowanie plików konfiguracyjnych
-COPY --chown=node:node package*.json ./
-
-# Instalacja zależności jako użytkownik node
-RUN npm install
-
-# Kopiowanie kodu źródłowego jako użytkownik node
-COPY --chown=node:node . .
-
-# Ustawienie zmiennych środowiskowych dla lepszej kompatybilności
-ENV NODE_ENV=development
-ENV CHOKIDAR_USEPOLLING=true
-ENV WATCHPACK_POLLING=true
-# Całkowite wyłączenie ESLint w środowisku deweloperskim
-ENV DISABLE_ESLINT_PLUGIN=true
-ENV ESLINT_NO_DEV_ERRORS=true
-ENV DANGEROUSLY_DISABLE_HOST_CHECK=true
+### Frontend
+```
+cd frontend
+npm test
 ```
 
-#### b) Ulepszona konfiguracja w docker-compose.yml:
-
-```yaml
-frontend:
-  volumes:
-    - ./frontend:/app:delegated
-    - frontend_node_modules:/app/node_modules
-  environment:
-    - DISABLE_ESLINT_PLUGIN=true
-    - ESLINT_NO_DEV_ERRORS=true
-    - CHOKIDAR_USEPOLLING=true
-    - WATCHPACK_POLLING=true
-    - DANGEROUSLY_DISABLE_HOST_CHECK=true
-
-volumes:
-  frontend_node_modules:
+### Backend
+```
+cd backend
+./mvnw test
 ```
 
-To rozwiązanie:
-- Używa użytkownika `node` od początku procesu budowania
-- Stosuje flagi `--chown=node:node` podczas operacji kopiowania
-- Używa nazwanego wolumenu dla `node_modules` zamiast montowania katalogu
-- Dodaje opcję `:delegated` dla lepszej wydajności
-- Całkowicie eliminuje potrzebę używania poleceń chmod, które powodowały zawieszanie
+## Dokumentacja API
 
-### 2. Problem z połączeniem do bazy danych
+API REST dostępne jest pod adresem `/api`. Główne endpointy:
 
-Napotkaliśmy dwa problemy związane z bazą danych:
+- `GET /api/assessments` - Lista ocen RODO
+- `GET /api/assessments/{id}` - Szczegóły oceny RODO
+- `POST /api/assessments` - Utworzenie nowej oceny
+- `PUT /api/assessments/{id}` - Aktualizacja oceny
+- `DELETE /api/assessments/{id}` - Usunięcie oceny
 
-#### a) Problem ze skryptem wait-for-postgres.sh
+- `GET /api/remedial-actions` - Lista działań naprawczych
+- `GET /api/remedial-actions/{id}` - Szczegóły działania naprawczego
+- `POST /api/remedial-actions` - Utworzenie nowego działania
+- `PUT /api/remedial-actions/{id}` - Aktualizacja działania
+- `DELETE /api/remedial-actions/{id}` - Usunięcie działania
 
-Skrypt wait-for-postgres.sh, który sprawdza dostępność bazy danych przed uruchomieniem backendu, miał problemy z uwierzytelnianiem. Problem został rozwiązany przez ulepszenie skryptu:
+- `GET /api/history/{assessmentId}` - Historia zmian oceny
 
-```bash
-# Wyświetlenie zmiennych środowiskowych do debugowania
-echo "Trying to connect to PostgreSQL at $host with user $POSTGRES_USER and database $POSTGRES_DB"
+## Licencja
 
-# Dodanie domyślnych wartości, jeśli zmienne środowiskowe nie są ustawione
-if [ -z "$POSTGRES_USER" ]; then
-  POSTGRES_USER="postgres"
-  echo "POSTGRES_USER not set, using default: $POSTGRES_USER"
-fi
-
-if [ -z "$POSTGRES_DB" ]; then
-  POSTGRES_DB="gdpr_assessment"
-  echo "POSTGRES_DB not set, using default: $POSTGRES_DB"
-fi
-
-if [ -z "$POSTGRES_PASSWORD" ]; then
-  POSTGRES_PASSWORD="postgres"
-  echo "POSTGRES_PASSWORD not set, using default: [hidden]"
-fi
-
-# Próba połączenia z bazą danych z jawnym przekazaniem hasła
-until PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$host" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c '\q'; do
-  >&2 echo "Postgres is unavailable - sleeping"
-  sleep 1
-done
-```
-
-#### b) Problem z konfiguracją DataSource w Spring Boot
-
-Aplikacja Spring Boot nie mogła skonfigurować DataSource, ponieważ zmienne środowiskowe nie były prawidłowo przekazywane. Logi pokazywały błąd:
-
-```
-Failed to configure a DataSource: 'url' attribute is not specified and no embedded datasource could be configured.
-```
-
-Problem został rozwiązany poprzez:
-
-1. Dodanie wartości domyślnych w docker-compose.yml:
-
-```yaml
-environment:
-  # Jawne ustawienie zmiennych środowiskowych z wartościami domyślnymi
-  - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/${POSTGRES_DB:-gdpr_assessment}
-  - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
-  - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-  - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
-```
-
-2. Dodanie wartości domyślnych w plikach konfiguracyjnych Spring Boot:
-
-```properties
-# application.properties
-spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://database:5432/gdpr_assessment}
-spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
-spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:postgres}
-```
-
-```yaml
-# application.yml
-spring:
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://database:5432/gdpr_assessment}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-```
-
-Te zmiany zapewniają, że aplikacja zawsze ma dostęp do wymaganych danych konfiguracyjnych, nawet jeśli zmienne środowiskowe nie są poprawnie przekazane.
-
-## Znane ograniczenia
-
-- Aplikacja wymaga działającego serwisu Docker do uruchomienia kontenerów
-- W niektórych środowiskach wirtualnych mogą wystąpić problemy z uruchomieniem usługi Docker
-
-## Kontakt
-
-W przypadku pytań lub problemów, prosimy o kontakt z zespołem rozwojowym.
+Ten projekt jest udostępniany na licencji MIT.
