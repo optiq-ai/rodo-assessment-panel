@@ -15,12 +15,14 @@ COPY --chown=node:node package*.json ./
 
 # Instalacja zależności jako użytkownik node
 RUN npm install --legacy-peer-deps
-RUN npm install --save @fortawesome/fontawesome-svg-core@latest @fortawesome/free-solid-svg-icons@latest @fortawesome/react-fontawesome@latest
-# Instalacja dodatkowych zależności potrzebnych do wykresów i eksportu PDF
-RUN npm install --save react-chartjs-2 chart.js jspdf jspdf-autotable html2canvas
 
 # Kopiowanie kodu źródłowego jako użytkownik node
 COPY --chown=node:node . .
+
+# Tworzenie katalogu public z niezbędnymi plikami, jeśli nie istnieją
+RUN mkdir -p /app/public
+RUN test -f /app/public/index.html || echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GDPR Assessment Panel</title></head><body><div id="root"></div></body></html>' > /app/public/index.html
+RUN test -f /app/public/manifest.json || echo '{"short_name":"GDPR Panel","name":"GDPR Assessment Panel","icons":[],"start_url":".","display":"standalone","theme_color":"#000000","background_color":"#ffffff"}' > /app/public/manifest.json
 
 # Ustawienie zmiennych środowiskowych dla lepszej kompatybilności
 ENV NODE_ENV=development
