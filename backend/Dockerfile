@@ -12,11 +12,16 @@ RUN mkdir -p src/main/resources
 # Tworzenie podstawowego pliku aplikacji Spring Boot
 RUN echo 'package com.rodoassessment.gdprassessmentpanel;\n\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\n\n@SpringBootApplication\npublic class GdprAssessmentPanelApplication {\n\n\tpublic static void main(String[] args) {\n\t\tSpringApplication.run(GdprAssessmentPanelApplication.class, args);\n\t}\n\n}' > src/main/java/com/rodoassessment/gdprassessmentpanel/GdprAssessmentPanelApplication.java
 
-# Tworzenie podstawowego pliku application.properties
-RUN echo 'spring.datasource.url=${SPRING_DATASOURCE_URL}\nspring.datasource.username=${SPRING_DATASOURCE_USERNAME}\nspring.datasource.password=${SPRING_DATASOURCE_PASSWORD}\nspring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO}\nserver.port=8080' > src/main/resources/application.properties
-
 # Kopiowanie kodu źródłowego (jeśli istnieje)
 COPY src ./src
+
+# Dodanie zależności PostgreSQL do pom.xml
+RUN sed -i '/<dependencies>/a \
+    <dependency>\n \
+        <groupId>org.postgresql</groupId>\n \
+        <artifactId>postgresql</artifactId>\n \
+        <version>42.6.0</version>\n \
+    </dependency>' pom.xml
 
 # Budowanie aplikacji
 RUN mvn clean package -DskipTests
@@ -40,5 +45,5 @@ COPY --from=build /app/target/*.jar app.jar
 # Ekspozycja portu 8080
 EXPOSE 8080
 
-# Uruchomienie aplikacji
+# Uruchomienie aplikacji z przekazaniem zmiennych środowiskowych
 CMD ["java", "-jar", "app.jar"]
