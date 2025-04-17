@@ -16,6 +16,8 @@ COPY --chown=node:node package*.json ./
 # Instalacja zależności jako użytkownik node
 RUN npm install --legacy-peer-deps
 RUN npm install --save @fortawesome/fontawesome-svg-core@latest @fortawesome/free-solid-svg-icons@latest @fortawesome/react-fontawesome@latest
+# Instalacja dodatkowych zależności potrzebnych do wykresów i eksportu PDF
+RUN npm install --save react-chartjs-2 chart.js jspdf jspdf-autotable html2canvas
 
 # Kopiowanie kodu źródłowego jako użytkownik node
 COPY --chown=node:node . .
