@@ -19,6 +19,7 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
       - DANGEROUSLY_DISABLE_HOST_CHECK=true
+      - NODE_OPTIONS=--openssl-legacy-provider
     depends_on:
       - backend
     networks:
@@ -35,14 +36,14 @@ services:
     environment:
       # Jawne ustawienie zmiennych środowiskowych z wartościami domyślnymi
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/${POSTGRES_DB:-gdpr_assessment}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/${POSTGRES_DB:-rodo_assessment}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
       - APP_JWT_SECRET=${APP_JWT_SECRET:-gdprAssessmentSecretKey123456789012345678901234567890123456789012345678901234567890}
       - APP_JWT_EXPIRATION=${APP_JWT_EXPIRATION:-86400000}
       # Zmienne dla skryptu wait-for-postgres
-      - POSTGRES_DB=${POSTGRES_DB:-gdpr_assessment}
+      - POSTGRES_DB=${POSTGRES_DB:-rodo_assessment}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
     depends_on:
