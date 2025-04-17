@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Tab, Nav, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Tab, Nav, ProgressBar, Accordion } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import RadioButtonAssessmentForm from '../components/assessment/RadioButtonAssessmentForm';
+import CompactAssessmentForm from '../components/assessment/CompactAssessmentForm';
+import MoreCompactAssessmentForm from '../components/assessment/MoreCompactAssessmentForm';
+import rodoAssessmentData from '../data/rodoAssessmentData';
 
 const Assessment = () => {
   const { id } = useParams();
@@ -12,6 +14,7 @@ const Assessment = () => {
   const [currentAreaIndex, setCurrentAreaIndex] = useState(0);
   const [overallProgress, setOverallProgress] = useState(0);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [viewMode, setViewMode] = useState('area'); // 'area' or 'chapter'
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,85 +36,7 @@ const Assessment = () => {
           // const response = await assessmentService.getAssessment(id);
           
           // Tymczasowe dane dla szkieletu
-          const mockChapters = [
-            {
-              id: 1,
-              name: 'I. Organizacja systemu ochrony DO',
-              description: 'Planowanie i organizacja systemu ochrony danych osobowych',
-              areas: [
-                {
-                  id: 1,
-                  name: 'I.1 Polityka w zakresie ochrony DO',
-                  description: 'Polityka i procedury przetwarzania danych osobowych',
-                  score: 'POZYTYWNA',
-                  comment: '',
-                  requirements: [
-                    {
-                      id: 1,
-                      text: 'Czy opracowano i wdrożono politykę ochrony danych osobowych?',
-                      value: 'TAK',
-                      comment: ''
-                    },
-                    {
-                      id: 2,
-                      text: 'Czy polityka ochrony danych osobowych jest aktualna i zgodna z RODO?',
-                      value: 'TAK',
-                      comment: ''
-                    },
-                    {
-                      id: 3,
-                      text: 'Czy pracownicy zostali zapoznani z polityką ochrony danych osobowych?',
-                      value: 'TAK',
-                      comment: ''
-                    }
-                  ]
-                },
-                {
-                  id: 2,
-                  name: 'I.2 Wyznaczenie ADO',
-                  description: 'Wyznaczenie Administratora Danych Osobowych',
-                  score: 'ZASTRZEŻENIA',
-                  comment: 'Należy zaktualizować dokumentację',
-                  requirements: [
-                    {
-                      id: 4,
-                      text: 'Czy w jednostce nastąpiło powierzenie zadań ADO wyznaczonym podmiotom?',
-                      value: 'TAK',
-                      comment: ''
-                    },
-                    {
-                      id: 5,
-                      text: 'Czy zakres zadań ADO został jasno określony?',
-                      value: 'NIE',
-                      comment: 'Brak formalnego dokumentu określającego zakres zadań'
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              id: 2,
-              name: 'II. Prawo do przetwarzania DO',
-              description: 'Zapewnienie poprawności procesów przetwarzania danych osobowych',
-              areas: [
-                {
-                  id: 3,
-                  name: 'II.1 Podstawy prawne przetwarzania DO',
-                  description: 'Podstawy prawne przetwarzania danych osobowych',
-                  score: 'W REALIZACJI',
-                  comment: 'Trwa weryfikacja podstaw prawnych',
-                  requirements: [
-                    {
-                      id: 6,
-                      text: 'Czy zidentyfikowano podstawy prawne przetwarzania danych osobowych?',
-                      value: 'W REALIZACJI',
-                      comment: 'Trwa proces identyfikacji'
-                    }
-                  ]
-                }
-              ]
-            }
-          ];
+          const mockChapters = JSON.parse(JSON.stringify(rodoAssessmentData.chapters));
           
           setAssessment({
             id: id,
@@ -126,85 +51,7 @@ const Assessment = () => {
           // const response = await assessmentService.getAssessmentTemplate();
           
           // Tymczasowe dane dla szkieletu
-          const mockChapters = [
-            {
-              id: 1,
-              name: 'I. Organizacja systemu ochrony DO',
-              description: 'Planowanie i organizacja systemu ochrony danych osobowych',
-              areas: [
-                {
-                  id: 1,
-                  name: 'I.1 Polityka w zakresie ochrony DO',
-                  description: 'Polityka i procedury przetwarzania danych osobowych',
-                  score: '',
-                  comment: '',
-                  requirements: [
-                    {
-                      id: 1,
-                      text: 'Czy opracowano i wdrożono politykę ochrony danych osobowych?',
-                      value: '',
-                      comment: ''
-                    },
-                    {
-                      id: 2,
-                      text: 'Czy polityka ochrony danych osobowych jest aktualna i zgodna z RODO?',
-                      value: '',
-                      comment: ''
-                    },
-                    {
-                      id: 3,
-                      text: 'Czy pracownicy zostali zapoznani z polityką ochrony danych osobowych?',
-                      value: '',
-                      comment: ''
-                    }
-                  ]
-                },
-                {
-                  id: 2,
-                  name: 'I.2 Wyznaczenie ADO',
-                  description: 'Wyznaczenie Administratora Danych Osobowych',
-                  score: '',
-                  comment: '',
-                  requirements: [
-                    {
-                      id: 4,
-                      text: 'Czy w jednostce nastąpiło powierzenie zadań ADO wyznaczonym podmiotom?',
-                      value: '',
-                      comment: ''
-                    },
-                    {
-                      id: 5,
-                      text: 'Czy zakres zadań ADO został jasno określony?',
-                      value: '',
-                      comment: ''
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              id: 2,
-              name: 'II. Prawo do przetwarzania DO',
-              description: 'Zapewnienie poprawności procesów przetwarzania danych osobowych',
-              areas: [
-                {
-                  id: 3,
-                  name: 'II.1 Podstawy prawne przetwarzania DO',
-                  description: 'Podstawy prawne przetwarzania danych osobowych',
-                  score: '',
-                  comment: '',
-                  requirements: [
-                    {
-                      id: 6,
-                      text: 'Czy zidentyfikowano podstawy prawne przetwarzania danych osobowych?',
-                      value: '',
-                      comment: ''
-                    }
-                  ]
-                }
-              ]
-            }
-          ];
+          const mockChapters = JSON.parse(JSON.stringify(rodoAssessmentData.chapters));
           
           setAssessment({
             id: 'new',
@@ -240,6 +87,7 @@ const Assessment = () => {
       ...prev,
       chapters: updatedChapters
     }));
+    updateProgress();
   };
 
   const handleAreaScoreChange = (chapterIndex, areaIndex, value) => {
@@ -283,6 +131,21 @@ const Assessment = () => {
       setCurrentChapterIndex(currentChapterIndex - 1);
       const prevChapter = assessment.chapters[currentChapterIndex - 1];
       setCurrentAreaIndex(prevChapter.areas.length - 1);
+    }
+    updateProgress();
+  };
+
+  // Funkcje nawigacji między rozdziałami
+  const handleNextChapter = () => {
+    if (currentChapterIndex < assessment.chapters.length - 1) {
+      setCurrentChapterIndex(currentChapterIndex + 1);
+    }
+    updateProgress();
+  };
+
+  const handlePrevChapter = () => {
+    if (currentChapterIndex > 0) {
+      setCurrentChapterIndex(currentChapterIndex - 1);
     }
     updateProgress();
   };
@@ -346,6 +209,21 @@ const Assessment = () => {
     }
   };
 
+  // Funkcja zmiany trybu widoku
+  const toggleViewMode = () => {
+    setViewMode(viewMode === 'area' ? 'chapter' : 'area');
+  };
+
+  // Obliczanie całkowitej liczby obszarów
+  const calculateTotalAreas = () => {
+    return assessment.chapters.reduce((total, chapter) => total + chapter.areas.length, 0);
+  };
+
+  // Obliczanie aktualnego indeksu obszaru globalnie
+  const calculateCurrentAreaIndex = () => {
+    return assessment.chapters.slice(0, currentChapterIndex).reduce((total, chapter) => total + chapter.areas.length, 0) + currentAreaIndex;
+  };
+
   if (loading) {
     return (
       <Container className="my-4">
@@ -407,7 +285,17 @@ const Assessment = () => {
             <Col>
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <h5>Ogólny postęp oceny:</h5>
-                <span className="badge bg-primary">{overallProgress}%</span>
+                <div className="d-flex align-items-center">
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm" 
+                    onClick={toggleViewMode} 
+                    className="me-3"
+                  >
+                    {viewMode === 'area' ? 'Przełącz na widok rozdziałów' : 'Przełącz na widok obszarów'}
+                  </Button>
+                  <span className="badge bg-primary">{overallProgress}%</span>
+                </div>
               </div>
               <ProgressBar 
                 now={overallProgress} 
@@ -420,18 +308,33 @@ const Assessment = () => {
 
           <Row>
             <Col>
-              {assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
-                <RadioButtonAssessmentForm
+              {viewMode === 'area' && assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
+                <CompactAssessmentForm
                   area={assessment.chapters[currentChapterIndex].areas[currentAreaIndex]}
                   chapterIndex={currentChapterIndex}
                   areaIndex={currentAreaIndex}
                   handleRequirementChange={handleRequirementChange}
                   handleAreaScoreChange={handleAreaScoreChange}
                   handleAreaCommentChange={handleAreaCommentChange}
-                  totalAreas={assessment.chapters.reduce((total, chapter) => total + chapter.areas.length, 0)}
-                  currentAreaIndex={assessment.chapters.slice(0, currentChapterIndex).reduce((total, chapter) => total + chapter.areas.length, 0) + currentAreaIndex}
+                  totalAreas={calculateTotalAreas()}
+                  currentAreaIndex={calculateCurrentAreaIndex()}
                   onNextArea={handleNextArea}
                   onPrevArea={handlePrevArea}
+                  onSave={handleSave}
+                  onExport={handleExport}
+                />
+              )}
+              
+              {viewMode === 'chapter' && assessment.chapters[currentChapterIndex] && (
+                <MoreCompactAssessmentForm
+                  chapter={assessment.chapters[currentChapterIndex]}
+                  chapterIndex={currentChapterIndex}
+                  handleRequirementChange={handleRequirementChange}
+                  handleAreaScoreChange={handleAreaScoreChange}
+                  handleAreaCommentChange={handleAreaCommentChange}
+                  totalChapters={assessment.chapters.length}
+                  onNextChapter={handleNextChapter}
+                  onPrevChapter={handlePrevChapter}
                   onSave={handleSave}
                   onExport={handleExport}
                 />
