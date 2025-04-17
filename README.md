@@ -62,52 +62,65 @@ gdpr-assessment-panel/
 
 ### 1. Problem z uprawnieniami w kontenerze frontendu
 
-W oryginalnym pliku Dockerfile dla frontendu występował problem z poleceniami chmod, które powodowały zawieszenie procesu budowania. Następnie pojawiły się problemy z uprawnieniami dla ESLint, który nie mógł utworzyć katalogu cache. Problemy zostały kompleksowo rozwiązane poprzez:
+W oryginalnym pliku Dockerfile dla frontendu występował problem z poleceniami chmod, które powodowały zawieszenie procesu budowania. Następnie pojawiły się problemy z uprawnieniami dla ESLint, który nie mógł utworzyć katalogu cache.
 
-#### a) Modyfikację Dockerfile dla frontendu:
+Po kilku próbach rozwiązania problemu z użyciem poleceń chmod, zdecydowaliśmy się na całkowicie nowe podejście, które eliminuje potrzebę używania tych poleceń:
+
+#### a) Całkowicie przeprojektowany Dockerfile dla frontendu:
 
 ```dockerfile
-# Tworzenie katalogów cache z odpowiednimi uprawnieniami przed kopiowaniem kodu
-RUN mkdir -p /app/node_modules/.cache && \
-    chmod -R 777 /app/node_modules/.cache && \
-    chmod -R 777 /app/node_modules
+FROM node:16-alpine
 
-# Ponowne ustawienie uprawnień po skopiowaniu kodu
-RUN chmod -R 777 /app/node_modules/.cache && \
-    chmod -R 777 /app/node_modules
+# Utworzenie użytkownika node z odpowiednimi uprawnieniami
+RUN mkdir -p /app && chown -R node:node /app
+WORKDIR /app
 
-# Ustawienie zmiennych środowiskowych
+# Przełączenie na użytkownika node
+USER node
+
+# Kopiowanie plików konfiguracyjnych
+COPY --chown=node:node package*.json ./
+
+# Instalacja zależności jako użytkownik node
+RUN npm install
+
+# Kopiowanie kodu źródłowego jako użytkownik node
+COPY --chown=node:node . .
+
+# Ustawienie zmiennych środowiskowych dla lepszej kompatybilności
 ENV NODE_ENV=development
 ENV CHOKIDAR_USEPOLLING=true
 ENV WATCHPACK_POLLING=true
+# Całkowite wyłączenie ESLint w środowisku deweloperskim
 ENV DISABLE_ESLINT_PLUGIN=true
 ENV ESLINT_NO_DEV_ERRORS=true
+ENV DANGEROUSLY_DISABLE_HOST_CHECK=true
 ```
 
-#### b) Modyfikację docker-compose.yml:
+#### b) Ulepszona konfiguracja w docker-compose.yml:
 
 ```yaml
 frontend:
-  # Dodanie specjalnego wolumenu dla katalogu cache
   volumes:
-    - ./frontend:/app
-    - /app/node_modules
-    - frontend_cache:/app/node_modules/.cache
-  # Dodanie zmiennych środowiskowych
+    - ./frontend:/app:delegated
+    - frontend_node_modules:/app/node_modules
   environment:
     - DISABLE_ESLINT_PLUGIN=true
     - ESLINT_NO_DEV_ERRORS=true
     - CHOKIDAR_USEPOLLING=true
     - WATCHPACK_POLLING=true
-  # Uruchomienie jako użytkownik node
-  user: node
+    - DANGEROUSLY_DISABLE_HOST_CHECK=true
 
-# Dodanie nowego wolumenu
 volumes:
-  frontend_cache:
+  frontend_node_modules:
 ```
 
-Te zmiany zapewniają prawidłowe działanie serwera deweloperskiego React i ESLint bez problemów z uprawnieniami.
+To rozwiązanie:
+- Używa użytkownika `node` od początku procesu budowania
+- Stosuje flagi `--chown=node:node` podczas operacji kopiowania
+- Używa nazwanego wolumenu dla `node_modules` zamiast montowania katalogu
+- Dodaje opcję `:delegated` dla lepszej wydajności
+- Całkowicie eliminuje potrzebę używania poleceń chmod, które powodowały zawieszanie
 
 ### 2. Problem z połączeniem do bazy danych
 
