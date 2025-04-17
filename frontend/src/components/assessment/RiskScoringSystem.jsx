@@ -1,533 +1,807 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Row, Col, Badge, OverlayTrigger, Tooltip, Button, Table, Accordion } from 'react-bootstrap';
+import { Card, Button, Row, Col, Form, Table, Badge, Alert, OverlayTrigger, Tooltip, Tabs, Tab } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInfoCircle, faExclamationTriangle, faHistory, faChartLine, faSave, faFileExport } from '@fortawesome/free-solid-svg-icons';
+import { faChartBar, faExclamationTriangle, faInfoCircle, faDownload, faExchangeAlt, faArrowUp, faArrowDown, faEquals } from '@fortawesome/free-solid-svg-icons';
+// Komentujemy import bibliotek wykresów i PDF do czasu rozwiązania problemu z zależnościami
+// import jsPDF from 'jspdf';
 
 /**
- * Komponent systemu punktacji ryzyka dla oceny RODO
+ * Komponent systemu oceny ryzyka RODO
  * 
  * Funkcjonalności:
- * - Skala punktacji ryzyka 1-5
- * - Automatyczne podsumowanie wyników
- * - Klasyfikacja poziomu ryzyka
- * - Kolorowe oznaczenia dla różnych poziomów ryzyka
- * - Podpowiedzi i objaśnienia
- * - Historia zmian oceny ryzyka
+ * - Ocena ryzyka w różnych obszarach RODO
+ * - Historia ocen ryzyka
+ * - Porównanie z poprzednimi ocenami
  * - Rekomendacje działań w zależności od poziomu ryzyka
- * - Eksport oceny ryzyka do PDF/CSV
+ * - Eksport oceny ryzyka do PDF
+ * - Analiza trendów ryzyka w czasie
  */
-const RiskScoringSystem = ({ chapterIndex, areaIndex, area, onScoreChange }) => {
-  // Inicjalizacja stanu z danymi obszaru, jeśli są dostępne
-  const initialRiskScores = area?.riskScore?.details || {
-    likelihood: 3, // Prawdopodobieństwo wystąpienia ryzyka (1-5)
-    impact: 3,     // Wpływ na prawa i wolności (1-5)
-    controls: 3,   // Skuteczność kontroli (1-5, gdzie 1 to najlepsze kontrole)
+const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
+  // Mockowe dane dla oceny ryzyka
+  const initialRiskData = {
+    overallRisk: 65,
+    lastUpdated: '2025-04-15',
+    areas: [
+      { id: 1, name: 'Zasady przetwarzania', score: 70, weight: 1.5, maxScore: 100 },
+      { id: 2, name: 'Prawa podmiotów', score: 60, weight: 1.2, maxScore: 100 },
+      { id: 3, name: 'Obowiązki administratora', score: 75, weight: 1.3, maxScore: 100 },
+      { id: 4, name: 'Bezpieczeństwo danych', score: 50, weight: 1.8, maxScore: 100 },
+      { id: 5, name: 'Przekazywanie danych', score: 60, weight: 1.0, maxScore: 100 },
+      { id: 6, name: 'Dokumentacja', score: 80, weight: 1.2, maxScore: 100 }
+    ],
+    previousAssessments: [
+      { 
+        date: '2025-03-01', 
+        overallRisk: 75,
+        areas: [
+          { id: 1, name: 'Zasady przetwarzania', score: 65 },
+          { id: 2, name: 'Prawa podmiotów', score: 55 },
+          { id: 3, name: 'Obowiązki administratora', score: 70 },
+          { id: 4, name: 'Bezpieczeństwo danych', score: 60 },
+          { id: 5, name: 'Przekazywanie danych', score: 70 },
+          { id: 6, name: 'Dokumentacja', score: 75 }
+        ]
+      },
+      { 
+        date: '2025-01-15', 
+        overallRisk: 85,
+        areas: [
+          { id: 1, name: 'Zasady przetwarzania', score: 60 },
+          { id: 2, name: 'Prawa podmiotów', score: 50 },
+          { id: 3, name: 'Obowiązki administratora', score: 65 },
+          { id: 4, name: 'Bezpieczeństwo danych', score: 70 },
+          { id: 5, name: 'Przekazywanie danych', score: 80 },
+          { id: 6, name: 'Dokumentacja', score: 70 }
+        ]
+      }
+    ]
   };
 
-  const [riskScores, setRiskScores] = useState(initialRiskScores);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showRecommendations, setShowRecommendations] = useState(false);
-  const [riskHistory, setRiskHistory] = useState([
-    {
-      date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      user: 'Jan Kowalski',
-      likelihood: 4,
-      impact: 4,
-      controls: 2,
-      score: 8,
-      level: 'Średnie'
-    },
-    {
-      date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      user: 'Anna Nowak',
-      likelihood: 3,
-      impact: 4,
-      controls: 2,
-      score: 6,
-      level: 'Średnie'
-    }
-  ]);
+  const [riskData, setRiskData] = useState(assessmentData?.riskData || initialRiskData);
+  const [activeTab, setActiveTab] = useState('current');
+  const [selectedPreviousAssessment, setSelectedPreviousAssessment] = useState(null);
+  const [showComparisonView, setShowComparisonView] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editedScores, setEditedScores] = useState({});
 
-  // Aktualizacja stanu, gdy zmienia się obszar
+  // Efekt do aktualizacji oceny ryzyka na podstawie danych z formularza
   useEffect(() => {
-    if (area?.riskScore?.details) {
-      setRiskScores(area.riskScore.details);
-    } else {
-      setRiskScores(initialRiskScores);
+    if (assessmentData && assessmentData.riskData) {
+      setRiskData(assessmentData.riskData);
     }
-  }, [area, chapterIndex, areaIndex]);
+  }, [assessmentData]);
 
-  // Obliczanie całkowitego wyniku ryzyka
-  const calculateRiskScore = () => {
-    return Math.round((riskScores.likelihood * riskScores.impact) / riskScores.controls);
-  };
-
-  // Określanie poziomu ryzyka na podstawie wyniku
-  const getRiskLevel = (score) => {
-    if (score <= 3) return { level: 'Niskie', color: 'success', value: 1 };
-    if (score <= 9) return { level: 'Średnie', color: 'warning', value: 2 };
-    return { level: 'Wysokie', color: 'danger', value: 3 };
-  };
-
-  // Obsługa zmiany wartości punktacji
-  const handleRiskScoreChange = (factor, value) => {
-    const newScores = { ...riskScores, [factor]: parseInt(value) };
-    setRiskScores(newScores);
-    
-    // Wywołanie funkcji zwrotnej z nowym wynikiem
-    if (onScoreChange) {
-      const totalScore = Math.round((newScores.likelihood * newScores.impact) / newScores.controls);
-      const riskLevel = getRiskLevel(totalScore);
-      onScoreChange(chapterIndex, areaIndex, totalScore, riskLevel.value);
+  // Efekt do powiadamiania rodzica o zmianach w ocenie ryzyka
+  useEffect(() => {
+    if (onRiskScoreChange) {
+      onRiskScoreChange(riskData);
     }
+  }, [riskData, onRiskScoreChange]);
+
+  // Obliczanie ogólnego poziomu ryzyka
+  const calculateOverallRisk = (areas) => {
+    if (!areas || areas.length === 0) return 0;
+    
+    const totalWeightedScore = areas.reduce((sum, area) => sum + (area.score * area.weight), 0);
+    const totalWeight = areas.reduce((sum, area) => sum + area.weight, 0);
+    
+    return Math.round(totalWeightedScore / totalWeight);
   };
 
-  // Zapisanie historii oceny ryzyka
-  const saveRiskHistory = () => {
-    const currentScore = calculateRiskScore();
-    const currentLevel = getRiskLevel(currentScore);
+  // Obsługa zmiany oceny ryzyka dla obszaru
+  const handleScoreChange = (areaId, newScore) => {
+    setEditedScores({
+      ...editedScores,
+      [areaId]: newScore
+    });
+  };
+
+  // Zapisywanie zmian w ocenie ryzyka
+  const saveRiskChanges = () => {
+    const updatedAreas = riskData.areas.map(area => {
+      if (editedScores[area.id] !== undefined) {
+        return {
+          ...area,
+          score: parseInt(editedScores[area.id])
+        };
+      }
+      return area;
+    });
     
-    const newHistoryEntry = {
-      date: new Date().toISOString().split('T')[0],
-      user: 'Aktualny użytkownik', // W rzeczywistej aplikacji byłoby to pobierane z kontekstu uwierzytelniania
-      likelihood: riskScores.likelihood,
-      impact: riskScores.impact,
-      controls: riskScores.controls,
-      score: currentScore,
-      level: currentLevel.level
+    const now = new Date().toISOString().split('T')[0];
+    
+    // Zapisanie poprzedniej oceny w historii
+    const previousAssessment = {
+      date: riskData.lastUpdated,
+      overallRisk: riskData.overallRisk,
+      areas: riskData.areas.map(area => ({
+        id: area.id,
+        name: area.name,
+        score: area.score
+      }))
     };
     
-    setRiskHistory([newHistoryEntry, ...riskHistory]);
-    setShowHistory(true);
-  };
-
-  // Eksport oceny ryzyka
-  const exportRiskAssessment = () => {
-    const currentScore = calculateRiskScore();
-    const currentLevel = getRiskLevel(currentScore);
-    
-    const exportData = {
-      area: area.name,
-      date: new Date().toISOString().split('T')[0],
-      riskFactors: {
-        likelihood: {
-          value: riskScores.likelihood,
-          description: "Prawdopodobieństwo wystąpienia naruszenia"
-        },
-        impact: {
-          value: riskScores.impact,
-          description: "Wpływ na prawa i wolności"
-        },
-        controls: {
-          value: riskScores.controls,
-          description: "Skuteczność istniejących kontroli"
-        }
-      },
-      result: {
-        score: currentScore,
-        level: currentLevel.level,
-        recommendations: getRecommendations(currentLevel.value)
-      },
-      history: riskHistory
+    const updatedRiskData = {
+      ...riskData,
+      areas: updatedAreas,
+      overallRisk: calculateOverallRisk(updatedAreas),
+      lastUpdated: now,
+      previousAssessments: [previousAssessment, ...riskData.previousAssessments]
     };
     
-    // W rzeczywistej aplikacji tutaj byłby kod do generowania PDF lub CSV
-    // Na potrzeby mockowe, po prostu zapisujemy jako JSON
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ocena-ryzyka-${area.name.replace(/\s+/g, '-').toLowerCase()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setRiskData(updatedRiskData);
+    setEditMode(false);
+    setEditedScores({});
   };
 
-  // Generowanie rekomendacji na podstawie poziomu ryzyka
-  const getRecommendations = (riskLevelValue) => {
-    const baseRecommendations = [
-      "Regularny przegląd i aktualizacja polityk ochrony danych",
-      "Szkolenia pracowników z zakresu ochrony danych osobowych",
-      "Dokumentowanie wszystkich procesów przetwarzania danych"
-    ];
+  // Anulowanie zmian w ocenie ryzyka
+  const cancelRiskChanges = () => {
+    setEditMode(false);
+    setEditedScores({});
+  };
+
+  // Eksport oceny ryzyka do PDF
+  const exportToPDF = () => {
+    // Funkcjonalność eksportu do PDF zostanie zaimplementowana po rozwiązaniu problemu z zależnościami
+    console.log('Eksport do PDF: ocena ryzyka');
+    alert('Funkcja eksportu do PDF zostanie dostępna po rozwiązaniu problemu z zależnościami.');
     
-    const mediumRiskRecommendations = [
-      "Przeprowadzenie szczegółowej analizy procesów przetwarzania danych",
-      "Wdrożenie dodatkowych środków technicznych i organizacyjnych",
-      "Konsultacja z Inspektorem Ochrony Danych"
-    ];
+    // Kod do odkomentowania po rozwiązaniu problemu z zależnościami
+    /*
+    const doc = new jsPDF();
     
-    const highRiskRecommendations = [
-      "Przeprowadzenie pełnej oceny skutków dla ochrony danych (DPIA)",
-      "Wdrożenie zaawansowanych środków bezpieczeństwa",
-      "Konsultacja z organem nadzorczym",
-      "Przegląd i rewizja wszystkich procesów przetwarzania danych"
-    ];
+    // Tytuł
+    doc.setFontSize(18);
+    doc.text('Ocena ryzyka RODO', 14, 22);
     
-    if (riskLevelValue === 3) {
-      return [...baseRecommendations, ...mediumRiskRecommendations, ...highRiskRecommendations];
-    } else if (riskLevelValue === 2) {
-      return [...baseRecommendations, ...mediumRiskRecommendations];
+    // Data wygenerowania
+    doc.setFontSize(10);
+    doc.text(`Wygenerowano: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Data ostatniej aktualizacji: ${new Date(riskData.lastUpdated).toLocaleDateString()}`, 14, 35);
+    
+    // Ogólny poziom ryzyka
+    doc.setFontSize(14);
+    doc.text(`Ogólny poziom ryzyka: ${riskData.overallRisk}%`, 14, 45);
+    
+    // Tabela z oceną ryzyka dla obszarów
+    const tableColumn = ["Obszar", "Ocena", "Waga", "Poziom ryzyka"];
+    const tableRows = [];
+    
+    riskData.areas.forEach(area => {
+      const riskLevel = area.score >= 80 ? 'Niski' : area.score >= 60 ? 'Średni' : 'Wysoki';
+      
+      const areaData = [
+        area.name,
+        `${area.score}%`,
+        area.weight,
+        riskLevel
+      ];
+      tableRows.push(areaData);
+    });
+    
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      theme: 'striped',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      alternateRowStyles: { fillColor: [240, 240, 240] },
+      margin: { top: 50 }
+    });
+    
+    // Rekomendacje
+    doc.setFontSize(14);
+    doc.text('Rekomendacje:', 14, doc.autoTable.previous.finalY + 10);
+    
+    let yPos = doc.autoTable.previous.finalY + 15;
+    
+    // Dodanie rekomendacji dla obszarów wysokiego ryzyka
+    const highRiskAreas = riskData.areas.filter(area => area.score < 60);
+    if (highRiskAreas.length > 0) {
+      doc.setFontSize(12);
+      doc.text('Obszary wysokiego ryzyka (priorytet działań):', 14, yPos);
+      yPos += 5;
+      
+      highRiskAreas.forEach(area => {
+        yPos += 5;
+        doc.setFontSize(10);
+        doc.text(`- ${area.name}: ${getRecommendation(area.score, area.name)}`, 14, yPos);
+      });
+    }
+    
+    // Zapisz PDF
+    doc.save('ocena-ryzyka-rodo.pdf');
+    */
+  };
+
+  // Funkcja zwracająca rekomendację na podstawie oceny
+  const getRecommendation = (score, areaName) => {
+    if (score >= 80) {
+      return `Obszar ${areaName} jest zgodny z wymogami RODO. Zalecane jest utrzymanie obecnych praktyk i regularne monitorowanie.`;
+    } else if (score >= 60) {
+      return `Obszar ${areaName} wymaga uwagi. Zalecane jest przeprowadzenie przeglądu procedur i wprowadzenie usprawnień.`;
     } else {
-      return baseRecommendations;
+      return `Obszar ${areaName} wymaga natychmiastowych działań naprawczych. Konieczne jest opracowanie i wdrożenie planu naprawczego.`;
     }
   };
 
-  const riskScore = calculateRiskScore();
-  const riskLevel = getRiskLevel(riskScore);
-  const recommendations = getRecommendations(riskLevel.value);
-
-  // Opisy dla tooltipów
-  const tooltips = {
-    likelihood: "Prawdopodobieństwo wystąpienia naruszenia lub incydentu związanego z ochroną danych osobowych.",
-    impact: "Potencjalny wpływ na prawa i wolności osób, których dane dotyczą, w przypadku naruszenia.",
-    controls: "Skuteczność istniejących środków kontroli i zabezpieczeń (niższa wartość oznacza lepsze kontrole).",
-    total: "Całkowity poziom ryzyka obliczony na podstawie prawdopodobieństwa, wpływu i skuteczności kontroli."
+  // Funkcja zwracająca kolor na podstawie oceny
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'danger';
   };
 
-  // Porównanie z poprzednią oceną ryzyka
-  const getPreviousRiskScore = () => {
-    if (riskHistory.length > 0) {
-      return riskHistory[0].score;
+  // Funkcja zwracająca ikonę zmiany na podstawie porównania ocen
+  const getChangeIcon = (currentScore, previousScore) => {
+    if (currentScore > previousScore) {
+      return <FontAwesomeIcon icon={faArrowUp} className="text-success" />;
+    } else if (currentScore < previousScore) {
+      return <FontAwesomeIcon icon={faArrowDown} className="text-danger" />;
+    } else {
+      return <FontAwesomeIcon icon={faEquals} className="text-secondary" />;
     }
-    return null;
   };
 
-  const previousScore = getPreviousRiskScore();
-  const scoreDifference = previousScore !== null ? riskScore - previousScore : null;
+  // Przygotowanie danych do porównania
+  const comparisonData = selectedPreviousAssessment ? {
+    current: {
+      date: riskData.lastUpdated,
+      overallRisk: riskData.overallRisk,
+      areas: riskData.areas
+    },
+    previous: selectedPreviousAssessment
+  } : null;
 
   return (
     <Card className="mb-4 risk-scoring-card">
       <Card.Header className="d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">System punktacji ryzyka</h5>
+        <h5 className="mb-0">
+          <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
+          System oceny ryzyka
+        </h5>
         <div>
-          {scoreDifference !== null && (
-            <Badge 
-              bg={scoreDifference > 0 ? 'danger' : scoreDifference < 0 ? 'success' : 'secondary'} 
+          {!editMode && activeTab === 'current' && (
+            <Button 
+              variant="outline-primary" 
+              size="sm"
+              onClick={() => setEditMode(true)}
               className="me-2"
             >
-              {scoreDifference > 0 ? '+' : ''}{scoreDifference}
-            </Badge>
+              Edytuj ocenę ryzyka
+            </Button>
           )}
-          <Badge bg={riskLevel.color} className="risk-level-badge">
-            Ryzyko: {riskLevel.level} ({riskScore}/25)
-          </Badge>
+          
+          {activeTab === 'current' && !showComparisonView && (
+            <Button 
+              variant="outline-info" 
+              size="sm"
+              onClick={() => {
+                setActiveTab('history');
+              }}
+              className="me-2"
+            >
+              Historia ocen
+            </Button>
+          )}
+          
+          {activeTab === 'history' && (
+            <Button 
+              variant="outline-primary" 
+              size="sm"
+              onClick={() => {
+                setActiveTab('current');
+                setShowComparisonView(false);
+              }}
+              className="me-2"
+            >
+              Aktualna ocena
+            </Button>
+          )}
+          
+          <Button 
+            variant="outline-secondary" 
+            size="sm"
+            onClick={exportToPDF}
+          >
+            <FontAwesomeIcon icon={faDownload} className="me-1" />
+            Eksportuj do PDF
+          </Button>
         </div>
       </Card.Header>
       <Card.Body>
-        <div className="d-flex justify-content-between mb-3">
-          <p className="text-muted">
-            Oceń poziom ryzyka związanego z przetwarzaniem danych osobowych w tym obszarze.
-            Wynik zostanie automatycznie obliczony na podstawie wprowadzonych wartości.
-          </p>
-          <div>
-            <Button 
-              variant="outline-secondary" 
-              size="sm" 
-              className="me-2"
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              <FontAwesomeIcon icon={faHistory} className="me-1" />
-              Historia
-            </Button>
-            <Button 
-              variant="outline-primary" 
-              size="sm" 
-              className="me-2"
-              onClick={() => setShowRecommendations(!showRecommendations)}
-            >
-              <FontAwesomeIcon icon={faInfoCircle} className="me-1" />
-              Rekomendacje
-            </Button>
-            <Button 
-              variant="outline-success" 
-              size="sm" 
-              className="me-2"
-              onClick={saveRiskHistory}
-            >
-              <FontAwesomeIcon icon={faSave} className="me-1" />
-              Zapisz
-            </Button>
-            <Button 
-              variant="outline-dark" 
-              size="sm"
-              onClick={exportRiskAssessment}
-            >
-              <FontAwesomeIcon icon={faFileExport} className="me-1" />
-              Eksport
-            </Button>
-          </div>
-        </div>
-        
-        <Row className="mb-4">
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label className="d-flex align-items-center">
-                Prawdopodobieństwo 
-                <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip>{tooltips.likelihood}</Tooltip>}
-                >
-                  <FontAwesomeIcon icon={faInfoCircle} className="ms-2 text-primary" />
-                </OverlayTrigger>
-              </Form.Label>
-              <Form.Range 
-                min={1} 
-                max={5} 
-                value={riskScores.likelihood}
-                onChange={(e) => handleRiskScoreChange('likelihood', e.target.value)}
-                className="risk-slider"
-              />
-              <div className="d-flex justify-content-between">
-                <small>Bardzo niskie</small>
-                <small>Bardzo wysokie</small>
-              </div>
-              <div className="text-center mt-1">
-                <Badge bg="secondary">{riskScores.likelihood}</Badge>
-                {riskHistory.length > 0 && riskScores.likelihood !== riskHistory[0].likelihood && (
-                  <Badge 
-                    bg={riskScores.likelihood > riskHistory[0].likelihood ? 'danger' : 'success'} 
-                    className="ms-2"
-                  >
-                    {riskScores.likelihood > riskHistory[0].likelihood ? '+' : ''}
-                    {riskScores.likelihood - riskHistory[0].likelihood}
-                  </Badge>
-                )}
-              </div>
-            </Form.Group>
-          </Col>
-          
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label className="d-flex align-items-center">
-                Wpływ 
-                <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip>{tooltips.impact}</Tooltip>}
-                >
-                  <FontAwesomeIcon icon={faInfoCircle} className="ms-2 text-primary" />
-                </OverlayTrigger>
-              </Form.Label>
-              <Form.Range 
-                min={1} 
-                max={5} 
-                value={riskScores.impact}
-                onChange={(e) => handleRiskScoreChange('impact', e.target.value)}
-                className="risk-slider"
-              />
-              <div className="d-flex justify-content-between">
-                <small>Minimalny</small>
-                <small>Krytyczny</small>
-              </div>
-              <div className="text-center mt-1">
-                <Badge bg="secondary">{riskScores.impact}</Badge>
-                {riskHistory.length > 0 && riskScores.impact !== riskHistory[0].impact && (
-                  <Badge 
-                    bg={riskScores.impact > riskHistory[0].impact ? 'danger' : 'success'} 
-                    className="ms-2"
-                  >
-                    {riskScores.impact > riskHistory[0].impact ? '+' : ''}
-                    {riskScores.impact - riskHistory[0].impact}
-                  </Badge>
-                )}
-              </div>
-            </Form.Group>
-          </Col>
-          
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label className="d-flex align-items-center">
-                Skuteczność kontroli 
-                <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip>{tooltips.controls}</Tooltip>}
-                >
-                  <FontAwesomeIcon icon={faInfoCircle} className="ms-2 text-primary" />
-                </OverlayTrigger>
-              </Form.Label>
-              <Form.Range 
-                min={1} 
-                max={5} 
-                value={riskScores.controls}
-                onChange={(e) => handleRiskScoreChange('controls', e.target.value)}
-                className="risk-slider"
-              />
-              <div className="d-flex justify-content-between">
-                <small>Bardzo skuteczne</small>
-                <small>Nieskuteczne</small>
-              </div>
-              <div className="text-center mt-1">
-                <Badge bg="secondary">{riskScores.controls}</Badge>
-                {riskHistory.length > 0 && riskScores.controls !== riskHistory[0].controls && (
-                  <Badge 
-                    bg={riskScores.controls > riskHistory[0].controls ? 'danger' : 'success'} 
-                    className="ms-2"
-                  >
-                    {riskScores.controls > riskHistory[0].controls ? '+' : ''}
-                    {riskScores.controls - riskHistory[0].controls}
-                  </Badge>
-                )}
-              </div>
-            </Form.Group>
-          </Col>
-        </Row>
-        
-        <div className="risk-result p-3 rounded">
-          <h6 className="d-flex align-items-center">
-            Wynik oceny ryzyka 
-            <OverlayTrigger
-              placement="top"
-              overlay={<Tooltip>{tooltips.total}</Tooltip>}
-            >
-              <FontAwesomeIcon icon={faInfoCircle} className="ms-2 text-primary" />
-            </OverlayTrigger>
-          </h6>
-          
-          <div className="progress mb-2" style={{height: '20px'}}>
-            <div 
-              className={`progress-bar bg-${riskLevel.color}`}
-              role="progressbar" 
-              style={{width: `${(riskScore/25)*100}%`}}
-              aria-valuenow={riskScore} 
-              aria-valuemin="0" 
-              aria-valuemax="25"
-            >
-              {riskScore}/25
+        {activeTab === 'current' && !showComparisonView && (
+          <>
+            <div className="mb-4">
+              <Row>
+                <Col md={6}>
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="risk-score-circle me-3">
+                      <div className={`circle-inner bg-${getScoreColor(riskData.overallRisk)}`}>
+                        <span className="risk-score">{riskData.overallRisk}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="mb-1">Ogólny poziom ryzyka</h5>
+                      <p className="text-muted mb-0">
+                        Ostatnia aktualizacja: {new Date(riskData.lastUpdated).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Alert variant={getScoreColor(riskData.overallRisk)}>
+                    <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
+                    {riskData.overallRisk >= 80 ? (
+                      'Organizacja jest w dużym stopniu zgodna z wymogami RODO. Zalecane jest utrzymanie obecnych praktyk i regularne monitorowanie.'
+                    ) : riskData.overallRisk >= 60 ? (
+                      'Organizacja wymaga uwagi w zakresie zgodności z RODO. Zalecane jest przeprowadzenie przeglądu procedur i wprowadzenie usprawnień.'
+                    ) : (
+                      'Organizacja wymaga natychmiastowych działań naprawczych w zakresie zgodności z RODO. Konieczne jest opracowanie i wdrożenie planu naprawczego.'
+                    )}
+                  </Alert>
+                </Col>
+                <Col md={6}>
+                  <Card className="h-100">
+                    <Card.Header>
+                      <h6 className="mb-0">Porównanie z poprzednią oceną</h6>
+                    </Card.Header>
+                    <Card.Body>
+                      {riskData.previousAssessments.length > 0 ? (
+                        <>
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                              <h6>Aktualna ocena</h6>
+                              <Badge bg={getScoreColor(riskData.overallRisk)} className="p-2">
+                                {riskData.overallRisk}%
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              {getChangeIcon(riskData.overallRisk, riskData.previousAssessments[0].overallRisk)}
+                              <Badge 
+                                bg={riskData.overallRisk >= riskData.previousAssessments[0].overallRisk ? 'success' : 'danger'}
+                                className="ms-2"
+                              >
+                                {Math.abs(riskData.overallRisk - riskData.previousAssessments[0].overallRisk)}%
+                              </Badge>
+                            </div>
+                            <div className="text-end">
+                              <h6>Poprzednia ocena</h6>
+                              <Badge bg={getScoreColor(riskData.previousAssessments[0].overallRisk)} className="p-2">
+                                {riskData.previousAssessments[0].overallRisk}%
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            variant="outline-primary" 
+                            size="sm"
+                            className="w-100"
+                            onClick={() => {
+                              setSelectedPreviousAssessment(riskData.previousAssessments[0]);
+                              setShowComparisonView(true);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faExchangeAlt} className="me-1" />
+                            Szczegółowe porównanie
+                          </Button>
+                        </>
+                      ) : (
+                        <Alert variant="info">
+                          <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
+                          Brak wcześniejszych ocen do porównania.
+                        </Alert>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
             </div>
-          </div>
-          
-          <div className="d-flex justify-content-between text-muted">
-            <small>Niskie ryzyko</small>
-            <small>Średnie ryzyko</small>
-            <small>Wysokie ryzyko</small>
-          </div>
-          
-          {riskLevel.value >= 2 && (
-            <div className="alert alert-warning mt-3">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
-              {riskLevel.value === 3 ? (
-                <span>Wykryto <strong>wysokie ryzyko</strong>. Zalecane jest przeprowadzenie pełnej oceny skutków dla ochrony danych (DPIA) oraz wdrożenie dodatkowych środków bezpieczeństwa.</span>
-              ) : (
-                <span>Wykryto <strong>średnie ryzyko</strong>. Zalecane jest rozważenie dodatkowych środków kontroli i zabezpieczeń.</span>
-              )}
-            </div>
-          )}
-        </div>
-        
-        {showHistory && (
-          <div className="mt-4">
-            <h6 className="d-flex align-items-center mb-3">
-              <FontAwesomeIcon icon={faHistory} className="me-2" />
-              Historia ocen ryzyka
-            </h6>
-            {riskHistory.length > 0 ? (
-              <div className="table-responsive">
-                <Table striped hover size="sm">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Użytkownik</th>
-                      <th>Prawdopodobieństwo</th>
-                      <th>Wpływ</th>
-                      <th>Kontrole</th>
-                      <th>Wynik</th>
-                      <th>Poziom ryzyka</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {riskHistory.map((entry, index) => (
-                      <tr key={index}>
-                        <td>{entry.date}</td>
-                        <td>{entry.user}</td>
-                        <td>{entry.likelihood}</td>
-                        <td>{entry.impact}</td>
-                        <td>{entry.controls}</td>
-                        <td>{entry.score}</td>
+            
+            <div className="mb-3">
+              <h6>Ocena ryzyka dla poszczególnych obszarów</h6>
+              <Table striped bordered hover>
+                <thead>
+                  <tr>
+                    <th>Obszar</th>
+                    <th style={{width: '15%'}}>Waga</th>
+                    <th style={{width: '15%'}}>Ocena</th>
+                    <th style={{width: '15%'}}>Poziom ryzyka</th>
+                    <th style={{width: '30%'}}>Rekomendacja</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {riskData.areas.map(area => {
+                    const previousArea = riskData.previousAssessments.length > 0 
+                      ? riskData.previousAssessments[0].areas.find(a => a.id === area.id)
+                      : null;
+                    
+                    return (
+                      <tr key={area.id}>
+                        <td>{area.name}</td>
+                        <td>{area.weight}</td>
                         <td>
-                          <Badge bg={
-                            entry.level === 'Wysokie' ? 'danger' : 
-                            entry.level === 'Średnie' ? 'warning' : 
-                            'success'
-                          }>
-                            {entry.level}
+                          {editMode ? (
+                            <Form.Control 
+                              type="number" 
+                              min="0" 
+                              max="100" 
+                              value={editedScores[area.id] !== undefined ? editedScores[area.id] : area.score}
+                              onChange={(e) => handleScoreChange(area.id, e.target.value)}
+                            />
+                          ) : (
+                            <div className="d-flex align-items-center">
+                              <Badge bg={getScoreColor(area.score)} className="p-2 me-2">
+                                {area.score}%
+                              </Badge>
+                              {previousArea && (
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={
+                                    <Tooltip>
+                                      Poprzednia ocena: {previousArea.score}%
+                                      {area.score !== previousArea.score && (
+                                        <> ({area.score > previousArea.score ? '+' : ''}{area.score - previousArea.score}%)</>
+                                      )}
+                                    </Tooltip>
+                                  }
+                                >
+                                  <span>{getChangeIcon(area.score, previousArea.score)}</span>
+                                </OverlayTrigger>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <Badge bg={getScoreColor(area.score)}>
+                            {area.score >= 80 ? 'Niski' : area.score >= 60 ? 'Średni' : 'Wysoki'}
                           </Badge>
                         </td>
+                        <td>
+                          <small>{getRecommendation(area.score, area.name)}</small>
+                        </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            ) : (
-              <p className="text-muted">Brak historii ocen ryzyka dla tego obszaru.</p>
-            )}
-          </div>
+                    );
+                  })}
+                </tbody>
+              </Table>
+              
+              {editMode && (
+                <div className="d-flex justify-content-end">
+                  <Button 
+                    variant="outline-secondary" 
+                    onClick={cancelRiskChanges}
+                    className="me-2"
+                  >
+                    Anuluj
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    onClick={saveRiskChanges}
+                  >
+                    Zapisz zmiany
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
         )}
         
-        {showRecommendations && (
-          <div className="mt-4">
-            <h6 className="d-flex align-items-center mb-3">
-              <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
-              Rekomendowane działania
+        {activeTab === 'current' && showComparisonView && comparisonData && (
+          <div className="comparison-view">
+            <div className="mb-3">
+              <Button 
+                variant="outline-secondary" 
+                size="sm"
+                onClick={() => setShowComparisonView(false)}
+              >
+                &larr; Powrót do oceny ryzyka
+              </Button>
+            </div>
+            
+            <h6 className="mb-3">
+              Porównanie oceny ryzyka z dnia {new Date(comparisonData.current.date).toLocaleDateString()} 
+              z oceną z dnia {new Date(comparisonData.previous.date).toLocaleDateString()}
             </h6>
-            <Accordion defaultActiveKey="0">
-              {recommendations.map((recommendation, index) => (
-                <Accordion.Item key={index} eventKey={index.toString()}>
-                  <Accordion.Header>
-                    <span className={index < 3 ? 'text-primary' : index < 6 ? 'text-warning' : 'text-danger'}>
-                      {recommendation}
-                    </span>
-                  </Accordion.Header>
-                  <Accordion.Body>
-                    <p className="text-muted">
-                      {index < 3 ? (
-                        "Podstawowe działanie zalecane dla wszystkich poziomów ryzyka. Stanowi dobrą praktykę w zakresie ochrony danych osobowych."
-                      ) : index < 6 ? (
-                        "Działanie zalecane dla średniego i wysokiego poziomu ryzyka. Pomaga w znacznym ograniczeniu ryzyka naruszenia ochrony danych."
-                      ) : (
-                        "Działanie krytyczne, zalecane dla wysokiego poziomu ryzyka. Niezbędne do odpowiedniego zabezpieczenia danych osobowych."
-                      )}
-                    </p>
-                    <div className="d-flex justify-content-end">
-                      <Button variant="outline-primary" size="sm">
-                        Dodaj do działań naprawczych
-                      </Button>
+            
+            <Row className="mb-4">
+              <Col md={5}>
+                <Card>
+                  <Card.Header className="bg-light">
+                    <h6 className="mb-0">
+                      Ocena z dnia {new Date(comparisonData.previous.date).toLocaleDateString()}
+                    </h6>
+                  </Card.Header>
+                  <Card.Body className="text-center">
+                    <div className="risk-score-circle mx-auto mb-3">
+                      <div className={`circle-inner bg-${getScoreColor(comparisonData.previous.overallRisk)}`}>
+                        <span className="risk-score">{comparisonData.previous.overallRisk}%</span>
+                      </div>
                     </div>
-                  </Accordion.Body>
-                </Accordion.Item>
-              ))}
-            </Accordion>
+                    <Badge bg={getScoreColor(comparisonData.previous.overallRisk)}>
+                      {comparisonData.previous.overallRisk >= 80 ? 'Niskie ryzyko' : 
+                       comparisonData.previous.overallRisk >= 60 ? 'Średnie ryzyko' : 
+                       'Wysokie ryzyko'}
+                    </Badge>
+                  </Card.Body>
+                </Card>
+              </Col>
+              
+              <Col md={2} className="d-flex align-items-center justify-content-center">
+                <div className="text-center">
+                  {getChangeIcon(comparisonData.current.overallRisk, comparisonData.previous.overallRisk)}
+                  <Badge 
+                    bg={comparisonData.current.overallRisk >= comparisonData.previous.overallRisk ? 'success' : 'danger'}
+                    className="d-block mt-2"
+                  >
+                    {comparisonData.current.overallRisk >= comparisonData.previous.overallRisk ? '+' : ''}
+                    {comparisonData.current.overallRisk - comparisonData.previous.overallRisk}%
+                  </Badge>
+                </div>
+              </Col>
+              
+              <Col md={5}>
+                <Card>
+                  <Card.Header className="bg-light">
+                    <h6 className="mb-0">
+                      Aktualna ocena ({new Date(comparisonData.current.date).toLocaleDateString()})
+                    </h6>
+                  </Card.Header>
+                  <Card.Body className="text-center">
+                    <div className="risk-score-circle mx-auto mb-3">
+                      <div className={`circle-inner bg-${getScoreColor(comparisonData.current.overallRisk)}`}>
+                        <span className="risk-score">{comparisonData.current.overallRisk}%</span>
+                      </div>
+                    </div>
+                    <Badge bg={getScoreColor(comparisonData.current.overallRisk)}>
+                      {comparisonData.current.overallRisk >= 80 ? 'Niskie ryzyko' : 
+                       comparisonData.current.overallRisk >= 60 ? 'Średnie ryzyko' : 
+                       'Wysokie ryzyko'}
+                    </Badge>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+            
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Obszar</th>
+                  <th style={{width: '15%'}}>Poprzednia ocena</th>
+                  <th style={{width: '15%'}}>Aktualna ocena</th>
+                  <th style={{width: '15%'}}>Zmiana</th>
+                  <th style={{width: '30%'}}>Komentarz</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparisonData.current.areas.map(currentArea => {
+                  const previousArea = comparisonData.previous.areas.find(a => a.id === currentArea.id);
+                  const change = previousArea ? currentArea.score - previousArea.score : null;
+                  
+                  return (
+                    <tr key={currentArea.id}>
+                      <td>{currentArea.name}</td>
+                      <td>
+                        {previousArea ? (
+                          <Badge bg={getScoreColor(previousArea.score)} className="p-2">
+                            {previousArea.score}%
+                          </Badge>
+                        ) : (
+                          <span className="text-muted">Brak danych</span>
+                        )}
+                      </td>
+                      <td>
+                        <Badge bg={getScoreColor(currentArea.score)} className="p-2">
+                          {currentArea.score}%
+                        </Badge>
+                      </td>
+                      <td>
+                        {change !== null ? (
+                          <div className="d-flex align-items-center">
+                            {getChangeIcon(currentArea.score, previousArea.score)}
+                            <Badge 
+                              bg={change > 0 ? 'success' : change < 0 ? 'danger' : 'secondary'}
+                              className="ms-2"
+                            >
+                              {change > 0 ? '+' : ''}{change}%
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-muted">Brak danych</span>
+                        )}
+                      </td>
+                      <td>
+                        {change !== null ? (
+                          <small>
+                            {change > 0 ? (
+                              'Poprawa zgodności w tym obszarze.'
+                            ) : change < 0 ? (
+                              'Pogorszenie zgodności w tym obszarze. Zalecane działania naprawcze.'
+                            ) : (
+                              'Brak zmian w tym obszarze.'
+                            )}
+                          </small>
+                        ) : (
+                          <small className="text-muted">Brak danych do porównania.</small>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
           </div>
         )}
         
-        <div className="mt-4 text-center">
-          <Button 
-            variant="outline-primary" 
-            size="sm"
-            onClick={() => {
-              const currentScore = calculateRiskScore();
-              const currentLevel = getRiskLevel(currentScore);
-              
-              // Symulacja analizy trendów
-              const trendData = [
-                { date: '2025-01-15', score: 12 },
-                { date: '2025-02-15', score: 10 },
-                { date: '2025-03-15', score: 8 },
-                { date: '2025-04-15', score: currentScore }
-              ];
-              
-              // W rzeczywistej aplikacji tutaj byłby kod do wyświetlania wykresu trendów
-              alert(`Analiza trendów ryzyka dla obszaru "${area.name}":\n\n` + 
-                    trendData.map(item => `${item.date}: ${item.score}/25`).join('\n') + 
-                    `\n\nObecny poziom ryzyka: ${currentLevel.level} (${currentScore}/25)`);
-            }}
-          >
-            <FontAwesomeIcon icon={faChartLine} className="me-1" />
-            Analiza trendów ryzyka
-          </Button>
-        </div>
+        {activeTab === 'history' && (
+          <div className="history-view">
+            <h6 className="mb-3">Historia ocen ryzyka</h6>
+            
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th style={{width: '15%'}}>Ogólny poziom ryzyka</th>
+                  <th style={{width: '15%'}}>Zmiana</th>
+                  <th style={{width: '20%'}}>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{new Date(riskData.lastUpdated).toLocaleDateString()}</td>
+                  <td>
+                    <Badge bg={getScoreColor(riskData.overallRisk)} className="p-2">
+                      {riskData.overallRisk}%
+                    </Badge>
+                  </td>
+                  <td>
+                    {riskData.previousAssessments.length > 0 && (
+                      <div className="d-flex align-items-center">
+                        {getChangeIcon(riskData.overallRisk, riskData.previousAssessments[0].overallRisk)}
+                        <Badge 
+                          bg={riskData.overallRisk >= riskData.previousAssessments[0].overallRisk ? 'success' : 'danger'}
+                          className="ms-2"
+                        >
+                          {riskData.overallRisk >= riskData.previousAssessments[0].overallRisk ? '+' : ''}
+                          {riskData.overallRisk - riskData.previousAssessments[0].overallRisk}%
+                        </Badge>
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      onClick={() => {
+                        setActiveTab('current');
+                        setShowComparisonView(false);
+                      }}
+                      className="me-2"
+                    >
+                      Szczegóły
+                    </Button>
+                    <Button 
+                      variant="outline-secondary" 
+                      size="sm"
+                      onClick={() => exportToPDF()}
+                    >
+                      <FontAwesomeIcon icon={faDownload} className="me-1" />
+                      Eksportuj
+                    </Button>
+                  </td>
+                </tr>
+                
+                {riskData.previousAssessments.map((assessment, index) => {
+                  const previousAssessment = index < riskData.previousAssessments.length - 1 
+                    ? riskData.previousAssessments[index + 1]
+                    : null;
+                  
+                  return (
+                    <tr key={index}>
+                      <td>{new Date(assessment.date).toLocaleDateString()}</td>
+                      <td>
+                        <Badge bg={getScoreColor(assessment.overallRisk)} className="p-2">
+                          {assessment.overallRisk}%
+                        </Badge>
+                      </td>
+                      <td>
+                        {previousAssessment && (
+                          <div className="d-flex align-items-center">
+                            {getChangeIcon(assessment.overallRisk, previousAssessment.overallRisk)}
+                            <Badge 
+                              bg={assessment.overallRisk >= previousAssessment.overallRisk ? 'success' : 'danger'}
+                              className="ms-2"
+                            >
+                              {assessment.overallRisk >= previousAssessment.overallRisk ? '+' : ''}
+                              {assessment.overallRisk - previousAssessment.overallRisk}%
+                            </Badge>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPreviousAssessment(assessment);
+                            setShowComparisonView(true);
+                            setActiveTab('current');
+                          }}
+                          className="me-2"
+                        >
+                          Porównaj
+                        </Button>
+                        <Button 
+                          variant="outline-secondary" 
+                          size="sm"
+                          onClick={() => alert(`Eksport oceny z dnia ${new Date(assessment.date).toLocaleDateString()}`)}
+                        >
+                          <FontAwesomeIcon icon={faDownload} className="me-1" />
+                          Eksportuj
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+            
+            <div className="mt-4">
+              <h6>Analiza trendów ryzyka w czasie</h6>
+              <div className="chart-container" style={{ position: 'relative', height: '300px', width: '100%' }}>
+                <div className="text-center p-5 bg-light rounded">
+                  <FontAwesomeIcon icon={faChartBar} size="3x" className="mb-3 text-primary" />
+                  <h4>Wykres trendów ryzyka</h4>
+                  <p className="text-muted">Wykres zostanie wyświetlony po rozwiązaniu problemu z zależnościami.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Card.Body>
+      
+      <style jsx>{`
+        .risk-score-circle {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background-color: #f8f9fa;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .circle-inner {
+          width: 70px;
+          height: 70px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+        }
+        
+        .risk-score {
+          font-size: 1.5rem;
+        }
+        
+        .sortable-header {
+          cursor: pointer;
+        }
+        
+        .bg-success {
+          background-color: #28a745;
+        }
+        
+        .bg-warning {
+          background-color: #ffc107;
+        }
+        
+        .bg-danger {
+          background-color: #dc3545;
+        }
+      `}</style>
     </Card>
   );
 };

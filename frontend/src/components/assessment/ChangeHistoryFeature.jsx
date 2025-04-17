@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Badge, Button, Form, Row, Col, Accordion, OverlayTrigger, Tooltip, Modal, InputGroup, Alert, Tabs, Tab, Dropdown, ButtonGroup } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHistory, faInfoCircle, faSearch, faCalendarAlt, faUser, faArrowRight, faSyncAlt, faFilter, faChartLine, faDownload, faExchangeAlt, faEye, faUndo, faCheck, faFileExport, faChartBar, faTable, faListAlt } from '@fortawesome/free-solid-svg-icons';
-import { Line } from 'react-chartjs-2';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// Komentujemy import bibliotek wykresów i PDF do czasu rozwiązania problemu z zależnościami
+// import { Line } from 'react-chartjs-2';
+// import jsPDF from 'jspdf';
+// import 'jspdf-autotable';
 
 /**
  * Komponent historii zmian dla oceny RODO
@@ -266,6 +267,12 @@ const ChangeHistoryFeature = ({ assessmentId }) => {
 
   // Eksport historii zmian do PDF
   const exportToPDF = () => {
+    // Funkcjonalność eksportu do PDF zostanie zaimplementowana po rozwiązaniu problemu z zależnościami
+    console.log('Eksport do PDF: historia zmian');
+    alert('Funkcja eksportu do PDF zostanie dostępna po rozwiązaniu problemu z zależnościami.');
+    
+    // Kod do odkomentowania po rozwiązaniu problemu z zależnościami
+    /*
     const doc = new jsPDF();
     
     // Tytuł
@@ -304,10 +311,17 @@ const ChangeHistoryFeature = ({ assessmentId }) => {
     
     // Zapisz PDF
     doc.save('historia-zmian-rodo.pdf');
+    */
   };
 
   // Eksport porównania do PDF
   const exportComparisonToPDF = () => {
+    // Funkcjonalność eksportu do PDF zostanie zaimplementowana po rozwiązaniu problemu z zależnościami
+    console.log('Eksport do PDF: porównanie wersji');
+    alert('Funkcja eksportu do PDF zostanie dostępna po rozwiązaniu problemu z zależnościami.');
+    
+    // Kod do odkomentowania po rozwiązaniu problemu z zależnościami
+    /*
     if (!comparisonMode || selectedVersions.length !== 2) return;
     
     const comparison = comparisonData();
@@ -356,6 +370,7 @@ const ChangeHistoryFeature = ({ assessmentId }) => {
     
     // Zapisz PDF
     doc.save(`porownanie-wersji-${comparison.olderVersion.version}-${comparison.newerVersion.version}.pdf`);
+    */
   };
 
   // Unikalni użytkownicy do filtrowania
@@ -375,34 +390,20 @@ const ChangeHistoryFeature = ({ assessmentId }) => {
     }));
   };
 
-  // Opcje wykresu trendów
-  const trendOptions = {
-    scales: {
-      y: {
-        beginAtZero: false,
-        min: 0,
-        max: 100,
-        title: {
-          display: true,
-          text: 'Poziom zgodności (%)'
-        }
-      }
-    },
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            return `${context.dataset.label}: ${context.raw}%`;
-          }
-        }
-      },
-      title: {
-        display: true,
-        text: selectedArea ? `Trend zgodności w czasie - ${selectedArea}` : 'Trend ogólnego wyniku w czasie'
-      }
-    },
-    responsive: true,
-    maintainAspectRatio: false
+  // Renderowanie wykresu trendów
+  const renderTrendChart = () => {
+    // Funkcjonalność wykresu zostanie zaimplementowana po rozwiązaniu problemu z zależnościami
+    return (
+      <div className="chart-container" style={{ position: 'relative', height: '400px', width: '100%' }}>
+        <div className="text-center p-5 bg-light rounded">
+          <FontAwesomeIcon icon={faChartLine} size="3x" className="mb-3 text-primary" />
+          <h4>Wykres trendów</h4>
+          <p className="text-muted">Wykres zostanie wyświetlony po rozwiązaniu problemu z zależnościami.</p>
+          <p>Dane: {JSON.stringify(prepareTrendData().datasets[0].data)}</p>
+        </div>
+        {/* <Line data={prepareTrendData()} options={trendOptions} /> */}
+      </div>
+    );
   };
 
   return (
@@ -943,10 +944,7 @@ const ChangeHistoryFeature = ({ assessmentId }) => {
               </Row>
               
               <div style={{ height: '400px' }}>
-                <Line 
-                  data={prepareTrendData()} 
-                  options={trendOptions}
-                />
+                {renderTrendChart()}
               </div>
               
               <div className="mt-3 alert alert-info">
@@ -1161,10 +1159,7 @@ const ChangeHistoryFeature = ({ assessmentId }) => {
           </div>
           
           <div style={{ height: '400px' }}>
-            <Line 
-              data={prepareTrendData()} 
-              options={trendOptions}
-            />
+            {renderTrendChart()}
           </div>
           
           <div className="mt-3 alert alert-info">
