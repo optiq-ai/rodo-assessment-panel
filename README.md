@@ -124,6 +124,10 @@ To rozwiązanie:
 
 ### 2. Problem z połączeniem do bazy danych
 
+Napotkaliśmy dwa problemy związane z bazą danych:
+
+#### a) Problem ze skryptem wait-for-postgres.sh
+
 Skrypt wait-for-postgres.sh, który sprawdza dostępność bazy danych przed uruchomieniem backendu, miał problemy z uwierzytelnianiem. Problem został rozwiązany przez ulepszenie skryptu:
 
 ```bash
@@ -153,7 +157,46 @@ until PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$host" -U "$POSTGRES_USER" -d "$P
 done
 ```
 
-Te zmiany zapewniają, że skrypt zawsze ma dostęp do wymaganych danych uwierzytelniających, nawet jeśli zmienne środowiskowe nie są poprawnie przekazane.
+#### b) Problem z konfiguracją DataSource w Spring Boot
+
+Aplikacja Spring Boot nie mogła skonfigurować DataSource, ponieważ zmienne środowiskowe nie były prawidłowo przekazywane. Logi pokazywały błąd:
+
+```
+Failed to configure a DataSource: 'url' attribute is not specified and no embedded datasource could be configured.
+```
+
+Problem został rozwiązany poprzez:
+
+1. Dodanie wartości domyślnych w docker-compose.yml:
+
+```yaml
+environment:
+  # Jawne ustawienie zmiennych środowiskowych z wartościami domyślnymi
+  - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/${POSTGRES_DB:-gdpr_assessment}
+  - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+  - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+  - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+```
+
+2. Dodanie wartości domyślnych w plikach konfiguracyjnych Spring Boot:
+
+```properties
+# application.properties
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://database:5432/gdpr_assessment}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:postgres}
+```
+
+```yaml
+# application.yml
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://database:5432/gdpr_assessment}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+```
+
+Te zmiany zapewniają, że aplikacja zawsze ma dostęp do wymaganych danych konfiguracyjnych, nawet jeśli zmienne środowiskowe nie są poprawnie przekazane.
 
 ## Znane ograniczenia
 
