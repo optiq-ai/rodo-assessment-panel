@@ -9,8 +9,8 @@ const NotFound = () => {
         <h2>404 - Strona nie znaleziona</h2>
         <p>Przepraszamy, ale strona której szukasz nie istnieje.</p>
       </Alert>
-      <Button as={Link} to="/" variant="primary">
-        Powrót do strony głównej
+      <Button as={Link} to="/dashboard" variant="primary">
+        Powrót do dashboardu
       </Button>
     </Container>
   );

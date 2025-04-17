@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Tab, Nav } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import AnimatedAssessmentForm from '../components/assessment/AnimatedAssessmentForm';
 
 const Assessment = () => {
   const { id } = useParams();
@@ -350,79 +351,15 @@ const Assessment = () => {
                             <p>{chapter.description}</p>
                             
                             {chapter.areas.map((area, areaIndex) => (
-                              <div key={area.id} className="area-section">
-                                <h4 className="area-title">{area.name}</h4>
-                                <p>{area.description}</p>
-                                
-                                {area.requirements.map((requirement, requirementIndex) => (
-                                  <div key={requirement.id} className="requirement-item">
-                                    <p>{requirement.text}</p>
-                                    <Row>
-                                      <Col md={6}>
-                                        <Form.Group className="mb-3">
-                                          <Form.Label>Ocena</Form.Label>
-                                          <Form.Select
-                                            value={requirement.value}
-                                            onChange={(e) => handleRequirementChange(chapterIndex, areaIndex, requirementIndex, 'value', e.target.value)}
-                                          >
-                                            <option value="">Wybierz ocenę</option>
-                                            <option value="TAK">TAK</option>
-                                            <option value="NIE">NIE</option>
-                                            <option value="ND">NIE DOTYCZY</option>
-                                            <option value="W REALIZACJI">W REALIZACJI</option>
-                                          </Form.Select>
-                                        </Form.Group>
-                                      </Col>
-                                      <Col md={6}>
-                                        <Form.Group className="mb-3">
-                                          <Form.Label>Komentarz</Form.Label>
-                                          <Form.Control
-                                            as="textarea"
-                                            rows={2}
-                                            value={requirement.comment}
-                                            onChange={(e) => handleRequirementChange(chapterIndex, areaIndex, requirementIndex, 'comment', e.target.value)}
-                                            placeholder="Dodaj komentarz (opcjonalnie)"
-                                          />
-                                        </Form.Group>
-                                      </Col>
-                                    </Row>
-                                  </div>
-                                ))}
-                                
-                                <div className="mt-4 p-3 bg-light">
-                                  <h5>Ocena obszaru</h5>
-                                  <Row>
-                                    <Col md={6}>
-                                      <Form.Group className="mb-3">
-                                        <Form.Label>Ocena</Form.Label>
-                                        <Form.Select
-                                          value={area.score}
-                                          onChange={(e) => handleAreaScoreChange(chapterIndex, areaIndex, e.target.value)}
-                                        >
-                                          <option value="">Wybierz ocenę</option>
-                                          <option value="POZYTYWNA">POZYTYWNA</option>
-                                          <option value="ZASTRZEŻENIA">ZASTRZEŻENIA</option>
-                                          <option value="NEGATYWNA">NEGATYWNA</option>
-                                          <option value="W REALIZACJI">W REALIZACJI</option>
-                                          <option value="NIE DOTYCZY">NIE DOTYCZY</option>
-                                        </Form.Select>
-                                      </Form.Group>
-                                    </Col>
-                                    <Col md={6}>
-                                      <Form.Group className="mb-3">
-                                        <Form.Label>Komentarz</Form.Label>
-                                        <Form.Control
-                                          as="textarea"
-                                          rows={2}
-                                          value={area.comment}
-                                          onChange={(e) => handleAreaCommentChange(chapterIndex, areaIndex, e.target.value)}
-                                          placeholder="Dodaj komentarz (opcjonalnie)"
-                                        />
-                                      </Form.Group>
-                                    </Col>
-                                  </Row>
-                                </div>
-                              </div>
+                              <AnimatedAssessmentForm
+                                key={area.id}
+                                area={area}
+                                chapterIndex={chapterIndex}
+                                areaIndex={areaIndex}
+                                handleRequirementChange={handleRequirementChange}
+                                handleAreaScoreChange={handleAreaScoreChange}
+                                handleAreaCommentChange={handleAreaCommentChange}
+                              />
                             ))}
                           </div>
                         </Tab.Pane>

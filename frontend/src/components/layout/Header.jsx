@@ -25,7 +25,7 @@ const Header = () => {
                 <Nav.Link as={Link} to="/assessment">Nowa ocena</Nav.Link>
               </>
             ) : (
-              <Nav.Link as={Link} to="/">Strona główna</Nav.Link>
+              <Nav.Link as={Link} to="/login">Logowanie</Nav.Link>
             )}
           </Nav>
           <Nav>

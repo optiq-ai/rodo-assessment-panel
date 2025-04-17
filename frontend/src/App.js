@@ -3,7 +3,6 @@ import { Routes, Route } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +11,7 @@ import Results from './pages/Results';
 import NotFound from './pages/NotFound';
 import PrivateRoute from './components/common/PrivateRoute';
 import './App.css';
+import './animations.css';
 
 function App() {
   return (
@@ -19,7 +19,7 @@ function App() {
       <Header />
       <Container className="flex-grow-1 py-4">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={
