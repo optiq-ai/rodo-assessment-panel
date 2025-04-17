@@ -12,6 +12,7 @@ import NotFound from './pages/NotFound';
 import PrivateRoute from './components/common/PrivateRoute';
 import './App.css';
 import './animations.css';
+import './assessment-animations.css';
 
 function App() {
   return (
