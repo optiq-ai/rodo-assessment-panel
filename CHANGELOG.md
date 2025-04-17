@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2025-04-17
+
+### Dodano
+- Przeprojektowano formularz oceny RODO z przyciskami radio zamiast list wyboru
+- Dodano animacje i efekty przejścia dla elementów formularza
+- Zaimplementowano kolorowe wskaźniki statusu i postępu
+- Dodano nawigację między sekcjami formularza (przyciski Następna/Poprzednia sekcja)
+- Dodano funkcję eksportu oceny do pliku JSON
+- Dodano wizualne potwierdzenie zapisania zmian
+- Stworzono plik assessment-animations.css z kompleksowymi animacjami dla formularza
+
 ## [1.1.0] - 2025-04-17
 
 ### Dodano
