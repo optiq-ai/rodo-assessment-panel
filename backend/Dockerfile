@@ -39,11 +39,18 @@ FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
+# Instalacja PostgreSQL client
+RUN apt-get update && apt-get install -y postgresql-client
+
 # Kopiowanie zbudowanej aplikacji z etapu budowania
 COPY --from=build /app/target/*.jar app.jar
+
+# Kopiowanie skryptu wait-for-postgres
+COPY wait-for-postgres.sh /wait-for-postgres.sh
+RUN chmod +x /wait-for-postgres.sh
 
 # Ekspozycja portu 8080
 EXPOSE 8080
 
-# Uruchomienie aplikacji z przekazaniem zmiennych środowiskowych
-CMD ["java", "-jar", "app.jar"]
+# Uruchomienie aplikacji z czekaniem na bazę danych
+CMD ["/bin/sh", "-c", "/wait-for-postgres.sh database && java -jar app.jar"]

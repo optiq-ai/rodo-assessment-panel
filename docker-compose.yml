@@ -35,6 +35,9 @@ services:
       - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
       - APP_JWT_SECRET=${APP_JWT_SECRET}
       - APP_JWT_EXPIRATION=${APP_JWT_EXPIRATION}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       - database
     networks:
@@ -56,6 +59,11 @@ services:
     networks:
       - gdpr-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   gdpr-network:

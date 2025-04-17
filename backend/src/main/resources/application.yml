@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+    show-sql: true
+    
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:gdprAssessmentSecretKey123456789012345678901234567890123456789012345678901234567890}
+    expiration: ${APP_JWT_EXPIRATION:86400000}
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    org.springframework.web: INFO
+    org.hibernate: ERROR
+    com.rodoassessment: DEBUG
