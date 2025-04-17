@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Frontend service - React application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080/api
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - gdpr-network
+    restart: unless-stopped
+
+  # Backend service - Spring Boot application
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/gdpr_assessment
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      - database
+    networks:
+      - gdpr-network
+    restart: unless-stopped
+
+  # Database service - PostgreSQL
+  database:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_DB=gdpr_assessment
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      - gdpr-network
+    restart: unless-stopped
+
+networks:
+  gdpr-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
