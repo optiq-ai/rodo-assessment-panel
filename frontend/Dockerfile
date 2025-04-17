@@ -11,6 +11,11 @@ RUN npm install
 # Kopiowanie kodu źródłowego
 COPY . .
 
+# Zmiana uprawnień dla katalogów node_modules
+RUN mkdir -p /app/node_modules/.cache && \
+    chmod -R 777 /app/node_modules/.cache && \
+    chmod -R 777 /app/node_modules
+
 # Ekspozycja portu 3000
 EXPOSE 3000
 
