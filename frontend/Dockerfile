@@ -6,18 +6,15 @@ RUN apk add --no-cache git
 # Utworzenie katalogu aplikacji
 WORKDIR /app
 
-# Kopiowanie plików konfiguracyjnych
+# Kopiowanie plików konfiguracyjnych i skryptu naprawiającego
 COPY package*.json ./
+COPY fix-ajv.js ./
 
-# Instalacja konkretnych wersji zależności
-RUN npm install --save react-scripts@5.0.1 webpack@5.76.0 webpack-dev-server@4.11.1 ajv@8.11.0 ajv-keywords@5.1.0 --legacy-peer-deps
-
-# Instalacja pozostałych zależności
+# Instalacja zależności
 RUN npm install --legacy-peer-deps
 
-# Tworzenie struktury katalogów dla ajv
-RUN mkdir -p /app/node_modules/ajv/dist/compile
-RUN echo 'module.exports = require("../../../lib/compile/codegen");' > /app/node_modules/ajv/dist/compile/codegen.js
+# Uruchomienie skryptu naprawiającego ajv po instalacji zależności
+RUN node fix-ajv.js
 
 # Kopiowanie kodu źródłowego
 COPY . .
@@ -41,5 +38,5 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 # Ekspozycja portu 3000
 EXPOSE 3000
 
-# Uruchomienie aplikacji z niestandardowym skryptem
-CMD ["sh", "-c", "echo 'Sprawdzanie struktury katalogów ajv...' && ls -la /app/node_modules/ajv/dist/compile && cat /app/node_modules/ajv/dist/compile/codegen.js && echo 'Uruchamianie aplikacji...' && npm start"]
+# Uruchomienie aplikacji z dodatkowym skryptem naprawiającym
+CMD ["sh", "-c", "node fix-ajv.js && npm start"]
