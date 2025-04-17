@@ -4,6 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import CompactAssessmentForm from '../components/assessment/CompactAssessmentForm';
 import MoreCompactAssessmentForm from '../components/assessment/MoreCompactAssessmentForm';
+import RiskScoringSystem from '../components/assessment/RiskScoringSystem';
+import AssessmentVisualizations from '../components/assessment/AssessmentVisualizations';
+import RemedialActionsSection from '../components/assessment/RemedialActionsSection';
+import ChangeHistoryFeature from '../components/assessment/ChangeHistoryFeature';
 import rodoAssessmentData from '../data/rodoAssessmentData';
 
 const Assessment = () => {
@@ -15,6 +19,7 @@ const Assessment = () => {
   const [overallProgress, setOverallProgress] = useState(0);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [viewMode, setViewMode] = useState('area'); // 'area' or 'chapter'
+  const [activeTab, setActiveTab] = useState('form'); // 'form', 'risk', 'visualizations', 'actions', 'history'
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,6 +107,20 @@ const Assessment = () => {
   const handleAreaCommentChange = (chapterIndex, areaIndex, value) => {
     const updatedChapters = [...assessment.chapters];
     updatedChapters[chapterIndex].areas[areaIndex].comment = value;
+    setAssessment(prev => ({
+      ...prev,
+      chapters: updatedChapters
+    }));
+  };
+
+  // Funkcja obsługi zmiany oceny ryzyka
+  const handleRiskScoreChange = (chapterIndex, areaIndex, score, riskLevel) => {
+    const updatedChapters = [...assessment.chapters];
+    if (!updatedChapters[chapterIndex].areas[areaIndex].riskScore) {
+      updatedChapters[chapterIndex].areas[areaIndex].riskScore = {};
+    }
+    updatedChapters[chapterIndex].areas[areaIndex].riskScore.score = score;
+    updatedChapters[chapterIndex].areas[areaIndex].riskScore.level = riskLevel;
     setAssessment(prev => ({
       ...prev,
       chapters: updatedChapters
@@ -306,38 +325,157 @@ const Assessment = () => {
             </Col>
           </Row>
 
+          <Row className="mb-4">
+            <Col>
+              <Nav variant="tabs" className="assessment-tabs">
+                <Nav.Item>
+                  <Nav.Link 
+                    active={activeTab === 'form'} 
+                    onClick={() => setActiveTab('form')}
+                  >
+                    Formularz oceny
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link 
+                    active={activeTab === 'risk'} 
+                    onClick={() => setActiveTab('risk')}
+                  >
+                    Ocena ryzyka
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link 
+                    active={activeTab === 'visualizations'} 
+                    onClick={() => setActiveTab('visualizations')}
+                  >
+                    Wizualizacje
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link 
+                    active={activeTab === 'actions'} 
+                    onClick={() => setActiveTab('actions')}
+                  >
+                    Działania naprawcze
+                  </Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link 
+                    active={activeTab === 'history'} 
+                    onClick={() => setActiveTab('history')}
+                  >
+                    Historia zmian
+                  </Nav.Link>
+                </Nav.Item>
+              </Nav>
+            </Col>
+          </Row>
+
           <Row>
             <Col>
-              {viewMode === 'area' && assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
-                <CompactAssessmentForm
-                  area={assessment.chapters[currentChapterIndex].areas[currentAreaIndex]}
-                  chapterIndex={currentChapterIndex}
-                  areaIndex={currentAreaIndex}
-                  handleRequirementChange={handleRequirementChange}
-                  handleAreaScoreChange={handleAreaScoreChange}
-                  handleAreaCommentChange={handleAreaCommentChange}
-                  totalAreas={calculateTotalAreas()}
-                  currentAreaIndex={calculateCurrentAreaIndex()}
-                  onNextArea={handleNextArea}
-                  onPrevArea={handlePrevArea}
-                  onSave={handleSave}
-                  onExport={handleExport}
-                />
+              {activeTab === 'form' && (
+                <>
+                  {viewMode === 'area' && assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
+                    <CompactAssessmentForm
+                      area={assessment.chapters[currentChapterIndex].areas[currentAreaIndex]}
+                      chapterIndex={currentChapterIndex}
+                      areaIndex={currentAreaIndex}
+                      handleRequirementChange={handleRequirementChange}
+                      handleAreaScoreChange={handleAreaScoreChange}
+                      handleAreaCommentChange={handleAreaCommentChange}
+                      totalAreas={calculateTotalAreas()}
+                      currentAreaIndex={calculateCurrentAreaIndex()}
+                      onNextArea={handleNextArea}
+                      onPrevArea={handlePrevArea}
+                      onSave={handleSave}
+                      onExport={handleExport}
+                    />
+                  )}
+                  
+                  {viewMode === 'chapter' && assessment.chapters[currentChapterIndex] && (
+                    <MoreCompactAssessmentForm
+                      chapter={assessment.chapters[currentChapterIndex]}
+                      chapterIndex={currentChapterIndex}
+                      handleRequirementChange={handleRequirementChange}
+                      handleAreaScoreChange={handleAreaScoreChange}
+                      handleAreaCommentChange={handleAreaCommentChange}
+                      totalChapters={assessment.chapters.length}
+                      onNextChapter={handleNextChapter}
+                      onPrevChapter={handlePrevChapter}
+                      onSave={handleSave}
+                      onExport={handleExport}
+                    />
+                  )}
+                </>
               )}
-              
-              {viewMode === 'chapter' && assessment.chapters[currentChapterIndex] && (
-                <MoreCompactAssessmentForm
-                  chapter={assessment.chapters[currentChapterIndex]}
-                  chapterIndex={currentChapterIndex}
-                  handleRequirementChange={handleRequirementChange}
-                  handleAreaScoreChange={handleAreaScoreChange}
-                  handleAreaCommentChange={handleAreaCommentChange}
-                  totalChapters={assessment.chapters.length}
-                  onNextChapter={handleNextChapter}
-                  onPrevChapter={handlePrevChapter}
-                  onSave={handleSave}
-                  onExport={handleExport}
-                />
+
+              {activeTab === 'risk' && assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
+                <div className="fade-in">
+                  <div className="mb-3 p-3 bg-light rounded">
+                    <h5>Ocena ryzyka dla obszaru: {assessment.chapters[currentChapterIndex].areas[currentAreaIndex].name}</h5>
+                    <p className="text-muted">
+                      Rozdział: {assessment.chapters[currentChapterIndex].name} | 
+                      Obszar {calculateCurrentAreaIndex() + 1} z {calculateTotalAreas()}
+                    </p>
+                  </div>
+                  <RiskScoringSystem 
+                    chapterIndex={currentChapterIndex}
+                    areaIndex={currentAreaIndex}
+                    area={assessment.chapters[currentChapterIndex].areas[currentAreaIndex]}
+                    onScoreChange={handleRiskScoreChange}
+                  />
+                  <div className="d-flex justify-content-between mt-3">
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={handlePrevArea}
+                      disabled={currentChapterIndex === 0 && currentAreaIndex === 0}
+                    >
+                      Poprzedni obszar
+                    </Button>
+                    <div>
+                      <Button 
+                        variant="primary" 
+                        className="me-2"
+                        onClick={handleSave}
+                      >
+                        Zapisz ocenę
+                      </Button>
+                      <Button 
+                        variant="outline-primary"
+                        onClick={handleExport}
+                      >
+                        Eksportuj
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={handleNextArea}
+                      disabled={currentChapterIndex === assessment.chapters.length - 1 && 
+                                currentAreaIndex === assessment.chapters[currentChapterIndex].areas.length - 1}
+                    >
+                      Następny obszar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'visualizations' && (
+                <div className="fade-in">
+                  <AssessmentVisualizations assessmentData={assessment} />
+                </div>
+              )}
+
+              {activeTab === 'actions' && (
+                <div className="fade-in">
+                  <RemedialActionsSection assessmentData={assessment} />
+                </div>
+              )}
+
+              {activeTab === 'history' && (
+                <div className="fade-in">
+                  <ChangeHistoryFeature assessmentId={assessment.id} />
+                </div>
               )}
             </Col>
           </Row>
