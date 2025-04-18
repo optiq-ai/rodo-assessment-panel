@@ -9,55 +9,67 @@ WORKDIR /app
 # Kopiowanie plików konfiguracyjnych
 COPY package*.json ./
 
-# Instalacja konkretnych wersji problematycznych zależności
-RUN npm install ajv@8.11.0 ajv-keywords@5.1.0 webpack@5.76.0 webpack-dev-server@4.11.1 --legacy-peer-deps
+# Tworzenie mocka dla ajv/dist/compile/codegen
+RUN mkdir -p /tmp/mock-modules/ajv/dist/compile
+RUN echo 'module.exports = { _ : { getCode: () => "return {}" } };' > /tmp/mock-modules/ajv/dist/compile/codegen.js
 
-# Instalacja pozostałych zależności
+# Tworzenie mocka dla ajv/lib/compile/codegen
+RUN mkdir -p /tmp/mock-modules/ajv/lib/compile
+RUN cp /tmp/mock-modules/ajv/dist/compile/codegen.js /tmp/mock-modules/ajv/lib/compile/codegen.js
+
+# Instalacja zależności z użyciem NODE_PATH
+ENV NODE_PATH=/tmp/mock-modules
 RUN npm install --legacy-peer-deps
 
-# Tworzenie skryptu naprawiającego ajv
+# Kopiowanie kodu źródłowego
+COPY . .
+
+# Tworzenie skryptu do modyfikacji webpack
 RUN echo '#!/usr/bin/env node\n\
 const fs = require("fs");\n\
 const path = require("path");\n\
 \n\
-const ajvKeywordsPath = path.resolve("./node_modules/ajv-keywords/dist/definitions/typeof.js");\n\
-if (fs.existsSync(ajvKeywordsPath)) {\n\
-  let content = fs.readFileSync(ajvKeywordsPath, "utf8");\n\
-  content = content.replace("require(\\"ajv/dist/compile/codegen\\")", "require(\\"ajv/lib/compile/codegen\\")");\n\
-  fs.writeFileSync(ajvKeywordsPath, content, "utf8");\n\
-  console.log("Naprawiono ajv-keywords/dist/definitions/typeof.js");\n\
+// Ścieżki do plików webpack\n\
+const webpackConfigPath = path.resolve("./node_modules/react-scripts/config/webpack.config.js");\n\
+\n\
+if (fs.existsSync(webpackConfigPath)) {\n\
+  console.log("Modyfikuję konfigurację webpack...");\n\
+  let content = fs.readFileSync(webpackConfigPath, "utf8");\n\
+  \n\
+  // Wyłączenie minimalizacji, która używa terser-webpack-plugin (zależnego od ajv)\n\
+  content = content.replace(/minimize: .+?,/g, "minimize: false,");\n\
+  \n\
+  // Zapisanie zmodyfikowanej konfiguracji\n\
+  fs.writeFileSync(webpackConfigPath, content, "utf8");\n\
+  console.log("Konfiguracja webpack zmodyfikowana pomyślnie!");\n\
 }\n\
 \n\
-const otherFiles = [\n\
-  "./node_modules/ajv-keywords/dist/keywords/typeof.js",\n\
-  "./node_modules/ajv-keywords/dist/keywords/index.js",\n\
-  "./node_modules/ajv-keywords/dist/index.js"\n\
+// Tworzenie mocków dla problematycznych modułów\n\
+const mockDirs = [\n\
+  "./node_modules/ajv/dist/compile",\n\
+  "./node_modules/ajv/lib/compile"\n\
 ];\n\
 \n\
-otherFiles.forEach(filePath => {\n\
-  const fullPath = path.resolve(filePath);\n\
-  if (fs.existsSync(fullPath)) {\n\
-    let content = fs.readFileSync(fullPath, "utf8");\n\
-    if (content.includes("require(\\"ajv/dist/compile/codegen\\")")) {\n\
-      content = content.replace("require(\\"ajv/dist/compile/codegen\\")", "require(\\"ajv/lib/compile/codegen\\")");\n\
-      fs.writeFileSync(fullPath, content, "utf8");\n\
-      console.log(`Naprawiono ${filePath}`);\n\
-    }\n\
+mockDirs.forEach(dir => {\n\
+  const fullPath = path.resolve(dir);\n\
+  if (!fs.existsSync(fullPath)) {\n\
+    fs.mkdirSync(fullPath, { recursive: true });\n\
+    console.log(`Utworzono katalog: ${fullPath}`);\n\
   }\n\
-});' > /app/fix-ajv.js
+  \n\
+  const codegenPath = path.join(fullPath, "codegen.js");\n\
+  fs.writeFileSync(codegenPath, "module.exports = { _ : { getCode: () => \\"return {}\\" } };", "utf8");\n\
+  console.log(`Utworzono mock dla: ${codegenPath}`);\n\
+});\n\
+\n\
+console.log("Wszystkie modyfikacje zakończone pomyślnie!");\n\
+' > /app/disable-codegen.js
 
 # Nadanie uprawnień wykonywania dla skryptu
-RUN chmod +x /app/fix-ajv.js
+RUN chmod +x /app/disable-codegen.js
 
-# Uruchomienie skryptu naprawiającego
-RUN node /app/fix-ajv.js
-
-# Tworzenie łącza symbolicznego dla brakującego katalogu
-RUN mkdir -p /app/node_modules/ajv/dist/compile
-RUN echo 'module.exports = require("ajv/lib/compile/codegen");' > /app/node_modules/ajv/dist/compile/codegen.js
-
-# Kopiowanie kodu źródłowego
-COPY . .
+# Uruchomienie skryptu modyfikującego webpack
+RUN node /app/disable-codegen.js
 
 # Ustawienie zmiennych środowiskowych
 ENV NODE_ENV=development
@@ -68,9 +80,10 @@ ENV ESLINT_NO_DEV_ERRORS=true
 ENV DANGEROUSLY_DISABLE_HOST_CHECK=true
 ENV SKIP_PREFLIGHT_CHECK=true
 ENV WDS_SOCKET_PORT=0
+ENV GENERATE_SOURCEMAP=false
 
 # Ekspozycja portu 3000
 EXPOSE 3000
 
-# Uruchomienie aplikacji z dodatkowym skryptem naprawiającym
-CMD ["sh", "-c", "node /app/fix-ajv.js && npm start"]
+# Uruchomienie aplikacji z dodatkowym skryptem wyłączającym codegen
+CMD ["sh", "-c", "node /app/disable-codegen.js && DISABLE_MINIMIZE=true npm start"]
