@@ -16,31 +16,38 @@ RUN npm install ajv@8.11.0 ajv-keywords@5.1.0 webpack@5.76.0 webpack-dev-server@
 RUN npm install --legacy-peer-deps
 
 # Tworzenie skryptu naprawiającego ajv
-RUN echo 'const fs = require("fs"); \
-const path = require("path"); \
-const ajvKeywordsPath = path.resolve("./node_modules/ajv-keywords/dist/definitions/typeof.js"); \
-if (fs.existsSync(ajvKeywordsPath)) { \
-  let content = fs.readFileSync(ajvKeywordsPath, "utf8"); \
-  content = content.replace("require(\\"ajv/dist/compile/codegen\\")", "require(\\"ajv/lib/compile/codegen\\")"); \
-  fs.writeFileSync(ajvKeywordsPath, content, "utf8"); \
-  console.log("Naprawiono ajv-keywords/dist/definitions/typeof.js"); \
-} \
-const otherFiles = [ \
-  "./node_modules/ajv-keywords/dist/keywords/typeof.js", \
-  "./node_modules/ajv-keywords/dist/keywords/index.js", \
-  "./node_modules/ajv-keywords/dist/index.js" \
-]; \
-otherFiles.forEach(filePath => { \
-  const fullPath = path.resolve(filePath); \
-  if (fs.existsSync(fullPath)) { \
-    let content = fs.readFileSync(fullPath, "utf8"); \
-    if (content.includes("require(\\"ajv/dist/compile/codegen\\")")) { \
-      content = content.replace("require(\\"ajv/dist/compile/codegen\\")", "require(\\"ajv/lib/compile/codegen\\")"); \
-      fs.writeFileSync(fullPath, content, "utf8"); \
-      console.log(`Naprawiono ${filePath}`); \
-    } \
-  } \
+RUN echo '#!/usr/bin/env node\n\
+const fs = require("fs");\n\
+const path = require("path");\n\
+\n\
+const ajvKeywordsPath = path.resolve("./node_modules/ajv-keywords/dist/definitions/typeof.js");\n\
+if (fs.existsSync(ajvKeywordsPath)) {\n\
+  let content = fs.readFileSync(ajvKeywordsPath, "utf8");\n\
+  content = content.replace("require(\\"ajv/dist/compile/codegen\\")", "require(\\"ajv/lib/compile/codegen\\")");\n\
+  fs.writeFileSync(ajvKeywordsPath, content, "utf8");\n\
+  console.log("Naprawiono ajv-keywords/dist/definitions/typeof.js");\n\
+}\n\
+\n\
+const otherFiles = [\n\
+  "./node_modules/ajv-keywords/dist/keywords/typeof.js",\n\
+  "./node_modules/ajv-keywords/dist/keywords/index.js",\n\
+  "./node_modules/ajv-keywords/dist/index.js"\n\
+];\n\
+\n\
+otherFiles.forEach(filePath => {\n\
+  const fullPath = path.resolve(filePath);\n\
+  if (fs.existsSync(fullPath)) {\n\
+    let content = fs.readFileSync(fullPath, "utf8");\n\
+    if (content.includes("require(\\"ajv/dist/compile/codegen\\")")) {\n\
+      content = content.replace("require(\\"ajv/dist/compile/codegen\\")", "require(\\"ajv/lib/compile/codegen\\")");\n\
+      fs.writeFileSync(fullPath, content, "utf8");\n\
+      console.log(`Naprawiono ${filePath}`);\n\
+    }\n\
+  }\n\
 });' > /app/fix-ajv.js
+
+# Nadanie uprawnień wykonywania dla skryptu
+RUN chmod +x /app/fix-ajv.js
 
 # Uruchomienie skryptu naprawiającego
 RUN node /app/fix-ajv.js
