@@ -1,486 +1,230 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Tab, Nav, ProgressBar, Accordion } from 'react-bootstrap';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import CompactAssessmentForm from '../components/assessment/CompactAssessmentForm';
-import MoreCompactAssessmentForm from '../components/assessment/MoreCompactAssessmentForm';
+import React from 'react';
+import { Container, Row, Col, Card, Button, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faShieldAlt, faChartBar, faClipboardCheck, faHistory, faFileAlt, faPlus } from '@fortawesome/free-solid-svg-icons';
 import RiskScoringSystem from '../components/assessment/RiskScoringSystem';
 import AssessmentVisualizations from '../components/assessment/AssessmentVisualizations';
 import RemedialActionsSection from '../components/assessment/RemedialActionsSection';
 import ChangeHistoryFeature from '../components/assessment/ChangeHistoryFeature';
-import rodoAssessmentData from '../data/rodoAssessmentData';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 const Assessment = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
-  const [currentAreaIndex, setCurrentAreaIndex] = useState(0);
-  const [overallProgress, setOverallProgress] = useState(0);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [viewMode, setViewMode] = useState('area'); // 'area' or 'chapter'
-  const [activeTab, setActiveTab] = useState('form'); // 'form', 'risk', 'visualizations', 'actions', 'history'
-
+  const isNewAssessment = id === 'new' || !id;
+  
+  // Stan dla danych oceny
+  const [assessmentData, setAssessmentData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [assessment, setAssessment] = useState({
-    id: id || 'new',
-    name: '',
-    description: '',
-    status: 'DRAFT',
-    chapters: []
-  });
-
+  const [error, setError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Pobieranie danych oceny
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAssessmentData = async () => {
       try {
         setLoading(true);
         
-        if (id && id !== 'new') {
-          // W rzeczywistości będzie to wywołanie do backendu
-          // const response = await assessmentService.getAssessment(id);
-          
-          // Tymczasowe dane dla szkieletu
-          const mockChapters = JSON.parse(JSON.stringify(rodoAssessmentData.chapters));
-          
-          setAssessment({
-            id: id,
-            name: 'Ocena RODO - Dział IT',
-            description: 'Ocena zgodności z RODO dla działu IT',
-            status: 'W TRAKCIE',
-            chapters: mockChapters
-          });
-        } else {
-          // Pobieranie struktury formularza dla nowej oceny
-          // W rzeczywistości będzie to wywołanie do backendu
-          // const response = await assessmentService.getAssessmentTemplate();
-          
-          // Tymczasowe dane dla szkieletu
-          const mockChapters = JSON.parse(JSON.stringify(rodoAssessmentData.chapters));
-          
-          setAssessment({
+        // Symulacja pobierania danych z API
+        // W rzeczywistości będzie to wywołanie do backendu
+        // const response = await assessmentService.getAssessment(id);
+        
+        // Tymczasowe dane dla szkieletu
+        if (isNewAssessment) {
+          // Nowa ocena
+          const mockNewAssessment = {
             id: 'new',
-            name: '',
-            description: '',
-            status: 'DRAFT',
-            chapters: mockChapters
-          });
+            name: 'Nowa ocena RODO',
+            createdAt: new Date().toISOString(),
+            status: 'W TRAKCIE',
+            progress: 0,
+            // Pozostałe dane będą inicjalizowane przez komponenty
+          };
+          
+          setAssessmentData(mockNewAssessment);
+        } else {
+          // Istniejąca ocena
+          const mockAssessment = {
+            id: id || '1',
+            name: 'Ocena RODO - Dział IT',
+            createdAt: '2025-04-15',
+            status: 'W TRAKCIE',
+            progress: 45,
+            // Dane dla komponentów są inicjalizowane wewnątrz nich
+          };
+          
+          setAssessmentData(mockAssessment);
         }
-      } catch (err) {
-        setError('Nie udało się pobrać danych oceny');
-        console.error(err);
-      } finally {
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Błąd podczas pobierania danych oceny:', error);
+        setError('Nie udało się pobrać danych oceny. Spróbuj ponownie później.');
         setLoading(false);
       }
     };
-
-    fetchData();
-  }, [id]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setAssessment(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleRequirementChange = (chapterIndex, areaIndex, requirementIndex, field, value) => {
-    const updatedChapters = [...assessment.chapters];
-    updatedChapters[chapterIndex].areas[areaIndex].requirements[requirementIndex][field] = value;
-    setAssessment(prev => ({
-      ...prev,
-      chapters: updatedChapters
-    }));
-    updateProgress();
-  };
-
-  const handleAreaScoreChange = (chapterIndex, areaIndex, value) => {
-    const updatedChapters = [...assessment.chapters];
-    updatedChapters[chapterIndex].areas[areaIndex].score = value;
-    setAssessment(prev => ({
-      ...prev,
-      chapters: updatedChapters
-    }));
-  };
-
-  const handleAreaCommentChange = (chapterIndex, areaIndex, value) => {
-    const updatedChapters = [...assessment.chapters];
-    updatedChapters[chapterIndex].areas[areaIndex].comment = value;
-    setAssessment(prev => ({
-      ...prev,
-      chapters: updatedChapters
-    }));
-  };
-
-  // Funkcja obsługi zmiany oceny ryzyka
-  const handleRiskScoreChange = (chapterIndex, areaIndex, score, riskLevel) => {
-    const updatedChapters = [...assessment.chapters];
-    if (!updatedChapters[chapterIndex].areas[areaIndex].riskScore) {
-      updatedChapters[chapterIndex].areas[areaIndex].riskScore = {};
-    }
-    updatedChapters[chapterIndex].areas[areaIndex].riskScore.score = score;
-    updatedChapters[chapterIndex].areas[areaIndex].riskScore.level = riskLevel;
-    setAssessment(prev => ({
-      ...prev,
-      chapters: updatedChapters
-    }));
-  };
-
-  // Funkcje nawigacji między obszarami
-  const handleNextArea = () => {
-    const currentChapter = assessment.chapters[currentChapterIndex];
-    if (currentAreaIndex < currentChapter.areas.length - 1) {
-      // Przejście do następnego obszaru w tym samym rozdziale
-      setCurrentAreaIndex(currentAreaIndex + 1);
-    } else if (currentChapterIndex < assessment.chapters.length - 1) {
-      // Przejście do pierwszego obszaru w następnym rozdziale
-      setCurrentChapterIndex(currentChapterIndex + 1);
-      setCurrentAreaIndex(0);
-    }
-    updateProgress();
-  };
-
-  const handlePrevArea = () => {
-    if (currentAreaIndex > 0) {
-      // Przejście do poprzedniego obszaru w tym samym rozdziale
-      setCurrentAreaIndex(currentAreaIndex - 1);
-    } else if (currentChapterIndex > 0) {
-      // Przejście do ostatniego obszaru w poprzednim rozdziale
-      setCurrentChapterIndex(currentChapterIndex - 1);
-      const prevChapter = assessment.chapters[currentChapterIndex - 1];
-      setCurrentAreaIndex(prevChapter.areas.length - 1);
-    }
-    updateProgress();
-  };
-
-  // Funkcje nawigacji między rozdziałami
-  const handleNextChapter = () => {
-    if (currentChapterIndex < assessment.chapters.length - 1) {
-      setCurrentChapterIndex(currentChapterIndex + 1);
-    }
-    updateProgress();
-  };
-
-  const handlePrevChapter = () => {
-    if (currentChapterIndex > 0) {
-      setCurrentChapterIndex(currentChapterIndex - 1);
-    }
-    updateProgress();
-  };
-
-  // Funkcja do obliczania ogólnego postępu
-  const updateProgress = () => {
-    let totalRequirements = 0;
-    let answeredRequirements = 0;
-
-    assessment.chapters.forEach(chapter => {
-      chapter.areas.forEach(area => {
-        area.requirements.forEach(req => {
-          totalRequirements++;
-          if (req.value) {
-            answeredRequirements++;
-          }
-        });
-      });
-    });
-
-    const progress = totalRequirements > 0 ? Math.round((answeredRequirements / totalRequirements) * 100) : 0;
-    setOverallProgress(progress);
-  };
-
-  // Funkcja eksportu oceny
-  const handleExport = () => {
-    // W rzeczywistości będzie to wywołanie do backendu
-    // const response = await assessmentService.exportAssessment(assessment.id);
     
-    // Symulacja eksportu
-    const exportData = JSON.stringify(assessment, null, 2);
-    const blob = new Blob([exportData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    fetchAssessmentData();
+  }, [id, isNewAssessment]);
+  
+  // Obsługa zmiany oceny ryzyka
+  const handleRiskScoreChange = (riskData) => {
+    if (!assessmentData) return;
     
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ocena-rodo-${assessment.id}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setAssessmentData(prev => ({
+      ...prev,
+      riskData: riskData
+    }));
   };
-
-  const handleSave = async () => {
+  
+  // Obsługa zmiany statusu działań naprawczych
+  const handleActionStatusChange = (actions) => {
+    if (!assessmentData) return;
+    
+    setAssessmentData(prev => ({
+      ...prev,
+      remedialActions: actions
+    }));
+  };
+  
+  // Obsługa wyboru historii
+  const handleHistorySelect = (version) => {
+    console.log('Wybrano wersję historyczną:', version);
+    // W pełnej implementacji tutaj byłoby ładowanie danych historycznych
+  };
+  
+  // Zapisywanie oceny
+  const handleSaveAssessment = async () => {
     try {
-      setLoading(true);
-      
+      // Symulacja zapisywania do API
       // W rzeczywistości będzie to wywołanie do backendu
-      // const response = await assessmentService.saveAssessment(assessment);
+      // await assessmentService.saveAssessment(assessmentData);
       
-      // Symulacja zapisywania
-      setTimeout(() => {
-        setLoading(false);
-        setSaveSuccess(true);
-        // Ukryj komunikat o sukcesie po 3 sekundach
-        setTimeout(() => setSaveSuccess(false), 3000);
-      }, 1000);
-    } catch (err) {
-      setError('Nie udało się zapisać oceny');
-      setLoading(false);
+      console.log('Zapisywanie oceny:', assessmentData);
+      
+      // Symulacja opóźnienia
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Jeśli to nowa ocena, przekieruj do edycji z nowym ID
+      if (isNewAssessment) {
+        const newId = Math.floor(Math.random() * 1000) + 10; // Symulacja generowania ID
+        navigate(`/assessment/${newId}`, { replace: true });
+      }
+      
+      setSaveSuccess(true);
+      
+      // Ukryj komunikat o sukcesie po 3 sekundach
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Błąd podczas zapisywania oceny:', error);
+      setError('Nie udało się zapisać oceny. Spróbuj ponownie później.');
     }
   };
-
-  // Funkcja zmiany trybu widoku
-  const toggleViewMode = () => {
-    setViewMode(viewMode === 'area' ? 'chapter' : 'area');
-  };
-
-  // Obliczanie całkowitej liczby obszarów
-  const calculateTotalAreas = () => {
-    return assessment.chapters.reduce((total, chapter) => total + chapter.areas.length, 0);
-  };
-
-  // Obliczanie aktualnego indeksu obszaru globalnie
-  const calculateCurrentAreaIndex = () => {
-    return assessment.chapters.slice(0, currentChapterIndex).reduce((total, chapter) => total + chapter.areas.length, 0) + currentAreaIndex;
-  };
-
-  if (loading) {
-    return (
-      <Container className="my-4">
-        <div className="text-center">
-          <p>Ładowanie formularza oceny...</p>
-        </div>
-      </Container>
-    );
-  }
 
   return (
-    <Container className="my-4">
+    <Container className="main-container">
       <Row className="mb-4">
         <Col>
-          <h1 className="fade-in">{id === 'new' ? 'Nowa ocena RODO' : 'Edycja oceny RODO'}</h1>
-          {error && <Alert variant="danger" className="fade-in">{error}</Alert>}
-          {saveSuccess && <Alert variant="success" className="fade-in">Zmiany zostały pomyślnie zapisane!</Alert>}
-        </Col>
-      </Row>
-
-      <Row className="mb-4">
-        <Col>
-          <Card className="fade-in">
-            <Card.Body>
-              <Form>
-                <Form.Group className="mb-3">
-                  <Form.Label>Nazwa oceny</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="name"
-                    value={assessment.name}
-                    onChange={handleInputChange}
-                    placeholder="Wprowadź nazwę oceny"
-                    required
-                    className="comment-animated"
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Opis</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    name="description"
-                    value={assessment.description}
-                    onChange={handleInputChange}
-                    placeholder="Wprowadź opis oceny"
-                    className="comment-animated"
-                  />
-                </Form.Group>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {assessment.chapters.length > 0 && (
-        <>
-          <Row className="mb-4">
-            <Col>
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <h5>Ogólny postęp oceny:</h5>
-                <div className="d-flex align-items-center">
-                  <Button 
-                    variant="outline-secondary" 
-                    size="sm" 
-                    onClick={toggleViewMode} 
-                    className="me-3"
-                  >
-                    {viewMode === 'area' ? 'Przełącz na widok rozdziałów' : 'Przełącz na widok obszarów'}
-                  </Button>
-                  <span className="badge bg-primary">{overallProgress}%</span>
-                </div>
+          <div className="d-flex justify-content-between align-items-center">
+            <h1 className="app-title">
+              {isNewAssessment ? 'Nowa ocena RODO' : assessmentData?.name || 'Ocena RODO'}
+            </h1>
+            <div>
+              <Button 
+                variant="primary" 
+                onClick={handleSaveAssessment}
+                disabled={loading}
+              >
+                <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                Zapisz ocenę
+              </Button>
+            </div>
+          </div>
+          
+          {saveSuccess && (
+            <Alert variant="success" className="mt-3 fade-in">
+              Ocena została pomyślnie zapisana!
+            </Alert>
+          )}
+          
+          {error && (
+            <Alert variant="danger" className="mt-3 fade-in">
+              {error}
+            </Alert>
+          )}
+          
+          {loading ? (
+            <div className="text-center p-5">
+              <p>Ładowanie danych oceny...</p>
+            </div>
+          ) : (
+            <>
+              <div className="assessment-info mb-4">
+                <Row>
+                  <Col md={6}>
+                    <Card className="widget-card">
+                      <Card.Body>
+                        <h5 className="mb-3">Informacje o ocenie</h5>
+                        <p><strong>Identyfikator:</strong> {isNewAssessment ? 'Nowa ocena' : assessmentData?.id}</p>
+                        <p><strong>Data utworzenia:</strong> {new Date(assessmentData?.createdAt).toLocaleDateString()}</p>
+                        <p>
+                          <strong>Status:</strong> 
+                          <span className={`badge bg-${assessmentData?.status === 'ZAKOŃCZONA' ? 'success' : 'warning'} ms-2`}>
+                            {assessmentData?.status}
+                          </span>
+                        </p>
+                        <p><strong>Postęp:</strong> {assessmentData?.progress}%</p>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                  <Col md={6}>
+                    <Card className="widget-card">
+                      <Card.Body>
+                        <h5 className="mb-3">Szybkie akcje</h5>
+                        <div className="d-flex flex-column gap-2">
+                          <Button variant="outline-primary" size="sm">
+                            <FontAwesomeIcon icon={faPlus} className="me-2" />
+                            Dodaj działanie naprawcze
+                          </Button>
+                          <Button variant="outline-primary" size="sm">
+                            <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                            Eksportuj raport
+                          </Button>
+                          <Button variant="outline-primary" size="sm">
+                            <FontAwesomeIcon icon={faHistory} className="me-2" />
+                            Pokaż historię zmian
+                          </Button>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
               </div>
-              <ProgressBar 
-                now={overallProgress} 
-                variant={overallProgress < 30 ? "danger" : overallProgress < 70 ? "warning" : "success"} 
-                animated 
-                style={{height: '15px'}}
+              
+              <RiskScoringSystem 
+                assessmentData={assessmentData} 
+                onRiskScoreChange={handleRiskScoreChange} 
               />
-            </Col>
-          </Row>
-
-          <Row className="mb-4">
-            <Col>
-              <Nav variant="tabs" className="assessment-tabs">
-                <Nav.Item>
-                  <Nav.Link 
-                    active={activeTab === 'form'} 
-                    onClick={() => setActiveTab('form')}
-                  >
-                    Formularz oceny
-                  </Nav.Link>
-                </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link 
-                    active={activeTab === 'risk'} 
-                    onClick={() => setActiveTab('risk')}
-                  >
-                    Ocena ryzyka
-                  </Nav.Link>
-                </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link 
-                    active={activeTab === 'visualizations'} 
-                    onClick={() => setActiveTab('visualizations')}
-                  >
-                    Wizualizacje
-                  </Nav.Link>
-                </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link 
-                    active={activeTab === 'actions'} 
-                    onClick={() => setActiveTab('actions')}
-                  >
-                    Działania naprawcze
-                  </Nav.Link>
-                </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link 
-                    active={activeTab === 'history'} 
-                    onClick={() => setActiveTab('history')}
-                  >
-                    Historia zmian
-                  </Nav.Link>
-                </Nav.Item>
-              </Nav>
-            </Col>
-          </Row>
-
-          <Row>
-            <Col>
-              {activeTab === 'form' && (
-                <>
-                  {viewMode === 'area' && assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
-                    <CompactAssessmentForm
-                      area={assessment.chapters[currentChapterIndex].areas[currentAreaIndex]}
-                      chapterIndex={currentChapterIndex}
-                      areaIndex={currentAreaIndex}
-                      handleRequirementChange={handleRequirementChange}
-                      handleAreaScoreChange={handleAreaScoreChange}
-                      handleAreaCommentChange={handleAreaCommentChange}
-                      totalAreas={calculateTotalAreas()}
-                      currentAreaIndex={calculateCurrentAreaIndex()}
-                      onNextArea={handleNextArea}
-                      onPrevArea={handlePrevArea}
-                      onSave={handleSave}
-                      onExport={handleExport}
-                    />
-                  )}
-                  
-                  {viewMode === 'chapter' && assessment.chapters[currentChapterIndex] && (
-                    <MoreCompactAssessmentForm
-                      chapter={assessment.chapters[currentChapterIndex]}
-                      chapterIndex={currentChapterIndex}
-                      handleRequirementChange={handleRequirementChange}
-                      handleAreaScoreChange={handleAreaScoreChange}
-                      handleAreaCommentChange={handleAreaCommentChange}
-                      totalChapters={assessment.chapters.length}
-                      onNextChapter={handleNextChapter}
-                      onPrevChapter={handlePrevChapter}
-                      onSave={handleSave}
-                      onExport={handleExport}
-                    />
-                  )}
-                </>
-              )}
-
-              {activeTab === 'risk' && assessment.chapters[currentChapterIndex] && assessment.chapters[currentChapterIndex].areas[currentAreaIndex] && (
-                <div className="fade-in">
-                  <div className="mb-3 p-3 bg-light rounded">
-                    <h5>Ocena ryzyka dla obszaru: {assessment.chapters[currentChapterIndex].areas[currentAreaIndex].name}</h5>
-                    <p className="text-muted">
-                      Rozdział: {assessment.chapters[currentChapterIndex].name} | 
-                      Obszar {calculateCurrentAreaIndex() + 1} z {calculateTotalAreas()}
-                    </p>
-                  </div>
-                  <RiskScoringSystem 
-                    chapterIndex={currentChapterIndex}
-                    areaIndex={currentAreaIndex}
-                    area={assessment.chapters[currentChapterIndex].areas[currentAreaIndex]}
-                    onScoreChange={handleRiskScoreChange}
-                  />
-                  <div className="d-flex justify-content-between mt-3">
-                    <Button 
-                      variant="outline-secondary" 
-                      onClick={handlePrevArea}
-                      disabled={currentChapterIndex === 0 && currentAreaIndex === 0}
-                    >
-                      Poprzedni obszar
-                    </Button>
-                    <div>
-                      <Button 
-                        variant="primary" 
-                        className="me-2"
-                        onClick={handleSave}
-                      >
-                        Zapisz ocenę
-                      </Button>
-                      <Button 
-                        variant="outline-primary"
-                        onClick={handleExport}
-                      >
-                        Eksportuj
-                      </Button>
-                    </div>
-                    <Button 
-                      variant="outline-secondary" 
-                      onClick={handleNextArea}
-                      disabled={currentChapterIndex === assessment.chapters.length - 1 && 
-                                currentAreaIndex === assessment.chapters[currentChapterIndex].areas.length - 1}
-                    >
-                      Następny obszar
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'visualizations' && (
-                <div className="fade-in">
-                  <AssessmentVisualizations assessmentData={assessment} />
-                </div>
-              )}
-
-              {activeTab === 'actions' && (
-                <div className="fade-in">
-                  <RemedialActionsSection assessmentData={assessment} />
-                </div>
-              )}
-
-              {activeTab === 'history' && (
-                <div className="fade-in">
-                  <ChangeHistoryFeature assessmentId={assessment.id} />
-                </div>
-              )}
-            </Col>
-          </Row>
-        </>
-      )}
+              
+              <AssessmentVisualizations 
+                assessmentData={assessmentData} 
+              />
+              
+              <RemedialActionsSection 
+                assessmentData={assessmentData} 
+                onActionStatusChange={handleActionStatusChange} 
+              />
+              
+              <ChangeHistoryFeature 
+                assessmentData={assessmentData} 
+                onHistorySelect={handleHistorySelect} 
+              />
+            </>
+          )}
+        </Col>
+      </Row>
     </Container>
   );
 };

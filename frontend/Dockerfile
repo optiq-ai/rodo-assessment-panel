@@ -1,4 +1,4 @@
-FROM node:14-alpine
+FROM node:16-alpine
 
 # Instalacja dodatkowych pakietów
 RUN apk add --no-cache git
@@ -9,9 +9,11 @@ WORKDIR /app
 # Kopiowanie plików konfiguracyjnych
 COPY package*.json ./
 COPY disable-codegen.js ./
+COPY fix-ajv.js ./
 
-# Nadanie uprawnień wykonywania dla skryptu
+# Nadanie uprawnień wykonywania dla skryptów
 RUN chmod +x /app/disable-codegen.js
+RUN chmod +x /app/fix-ajv.js
 
 # Tworzenie mocka dla ajv/dist/compile/codegen
 RUN mkdir -p /tmp/mock-modules/ajv/dist/compile
@@ -30,6 +32,7 @@ COPY . .
 
 # Uruchomienie skryptu modyfikującego webpack
 RUN node /app/disable-codegen.js
+RUN node /app/fix-ajv.js
 
 # Ustawienie zmiennych środowiskowych
 ENV NODE_ENV=development
@@ -41,9 +44,10 @@ ENV DANGEROUSLY_DISABLE_HOST_CHECK=true
 ENV SKIP_PREFLIGHT_CHECK=true
 ENV WDS_SOCKET_PORT=0
 ENV GENERATE_SOURCEMAP=false
+ENV FAST_REFRESH=false
 
 # Ekspozycja portu 3000
 EXPOSE 3000
 
 # Uruchomienie aplikacji z dodatkowym skryptem wyłączającym codegen
-CMD ["sh", "-c", "node /app/disable-codegen.js && DISABLE_MINIMIZE=true npm start"]
+CMD ["sh", "-c", "node /app/disable-codegen.js && node /app/fix-ajv.js && DISABLE_MINIMIZE=true npm start"]

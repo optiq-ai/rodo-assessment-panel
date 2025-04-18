@@ -1,51 +1,71 @@
 import React from 'react';
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUser, faCog, faSignOutAlt, faShieldAlt, faChartBar, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 
 const Header = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Błąd podczas wylogowywania:', error);
+    }
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg">
+    <header className="app-header">
       <Container>
-        <Navbar.Brand as={Link} to="/">Panel Oceny RODO</Navbar.Brand>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto">
-            {currentUser ? (
-              <>
-                <Nav.Link as={Link} to="/dashboard">Dashboard</Nav.Link>
-                <Nav.Link as={Link} to="/assessment">Nowa ocena</Nav.Link>
-              </>
-            ) : (
-              <Nav.Link as={Link} to="/login">Logowanie</Nav.Link>
-            )}
-          </Nav>
-          <Nav>
-            {currentUser ? (
-              <>
-                <Navbar.Text className="me-3">
-                  Zalogowany jako: <span className="text-white">{currentUser.username}</span>
-                </Navbar.Text>
-                <Button variant="outline-light" onClick={handleLogout}>Wyloguj</Button>
-              </>
-            ) : (
-              <>
-                <Nav.Link as={Link} to="/login">Logowanie</Nav.Link>
-                <Nav.Link as={Link} to="/register">Rejestracja</Nav.Link>
-              </>
-            )}
-          </Nav>
-        </Navbar.Collapse>
+        <Navbar expand="lg" variant="dark" className="p-0">
+          <Navbar.Brand as={Link} to={currentUser ? '/dashboard' : '/'} className="d-flex align-items-center">
+            <FontAwesomeIcon icon={faShieldAlt} className="me-2" />
+            <span className="app-title">Panel Oceny RODO</span>
+          </Navbar.Brand>
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="ms-auto">
+              {currentUser ? (
+                <>
+                  <Nav.Link as={Link} to="/dashboard" className="text-light">
+                    <FontAwesomeIcon icon={faChartBar} className="me-1" /> Dashboard
+                  </Nav.Link>
+                  <NavDropdown 
+                    title={
+                      <span className="text-light">
+                        <FontAwesomeIcon icon={faUser} className="me-1" /> {currentUser.username}
+                      </span>
+                    } 
+                    id="basic-nav-dropdown"
+                    align="end"
+                  >
+                    <NavDropdown.Item as={Link} to="/settings">
+                      <FontAwesomeIcon icon={faCog} className="me-2" /> Ustawienia
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} to="/settings/subscription">
+                      <FontAwesomeIcon icon={faCreditCard} className="me-2" /> Subskrypcja
+                    </NavDropdown.Item>
+                    <NavDropdown.Divider />
+                    <NavDropdown.Item onClick={handleLogout}>
+                      <FontAwesomeIcon icon={faSignOutAlt} className="me-2" /> Wyloguj
+                    </NavDropdown.Item>
+                  </NavDropdown>
+                </>
+              ) : (
+                <>
+                  <Nav.Link as={Link} to="/login" className="text-light">Logowanie</Nav.Link>
+                  <Nav.Link as={Link} to="/register" className="text-light">Rejestracja</Nav.Link>
+                </>
+              )}
+            </Nav>
+          </Navbar.Collapse>
+        </Navbar>
       </Container>
-    </Navbar>
+    </header>
   );
 };
 

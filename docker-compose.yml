@@ -21,11 +21,19 @@ services:
       - DANGEROUSLY_DISABLE_HOST_CHECK=true
       - WDS_SOCKET_PORT=0
       - SKIP_PREFLIGHT_CHECK=true
+      - FAST_REFRESH=false
+      - GENERATE_SOURCEMAP=false
     depends_on:
       - backend
     networks:
       - gdpr-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Backend service - Spring Boot application
   backend:
