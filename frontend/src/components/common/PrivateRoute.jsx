@@ -1,22 +1,21 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 const PrivateRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (!loading && !currentUser) {
-      navigate('/login', { replace: true });
-    }
-  }, [currentUser, loading, navigate]);
+  const location = useLocation();
 
   if (loading) {
-    return <div className="d-flex justify-content-center p-5">Ładowanie...</div>;
+    return <div>Ładowanie...</div>;
   }
 
-  return currentUser ? children : null;
+  if (!currentUser) {
+    // Przekierowanie do strony logowania z zapisaniem oryginalnej ścieżki
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
 };
 
 export default PrivateRoute;

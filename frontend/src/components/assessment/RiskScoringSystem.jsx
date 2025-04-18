@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Row, Col, Form, Table, Badge, Alert, OverlayTrigger, Tooltip, Tabs, Tab } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartBar, faExclamationTriangle, faInfoCircle, faDownload, faExchangeAlt, faArrowUp, faArrowDown, faEquals } from '@fortawesome/free-solid-svg-icons';
@@ -63,20 +63,33 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
   const [showComparisonView, setShowComparisonView] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedScores, setEditedScores] = useState({});
+  // Dodanie flagi, aby zapobiec nieskończonej pętli
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Efekt do aktualizacji oceny ryzyka na podstawie danych z formularza
+  // Uruchamiany tylko przy pierwszym renderowaniu lub gdy zmienią się dane wejściowe
   useEffect(() => {
-    if (assessmentData && assessmentData.riskData) {
+    if (assessmentData && assessmentData.riskData && !isInitialized) {
       setRiskData(assessmentData.riskData);
+      setIsInitialized(true);
     }
-  }, [assessmentData]);
+  }, [assessmentData, isInitialized]);
 
-  // Efekt do powiadamiania rodzica o zmianach w ocenie ryzyka
-  useEffect(() => {
-    if (onRiskScoreChange) {
+  // Memoizacja funkcji powiadamiającej rodzica o zmianach
+  const notifyParent = useCallback(() => {
+    if (onRiskScoreChange && isInitialized) {
       onRiskScoreChange(riskData);
     }
-  }, [riskData, onRiskScoreChange]);
+  }, [onRiskScoreChange, riskData, isInitialized]);
+
+  // Efekt do powiadamiania rodzica o zmianach w ocenie ryzyka
+  // Używamy useCallback, aby zapobiec nieskończonej pętli
+  useEffect(() => {
+    // Nie wywołujemy podczas pierwszego renderowania
+    if (isInitialized) {
+      notifyParent();
+    }
+  }, [notifyParent, isInitialized]);
 
   // Obliczanie ogólnego poziomu ryzyka
   const calculateOverallRisk = (areas) => {
@@ -421,10 +434,10 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
                         <td>{area.weight}</td>
                         <td>
                           {editMode ? (
-                            <Form.Control 
-                              type="number" 
-                              min="0" 
-                              max="100" 
+                            <Form.Control
+                              type="number"
+                              min="0"
+                              max="100"
                               value={editedScores[area.id] !== undefined ? editedScores[area.id] : area.score}
                               onChange={(e) => handleScoreChange(area.id, e.target.value)}
                             />
@@ -434,19 +447,12 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
                                 {area.score}%
                               </Badge>
                               {previousArea && (
-                                <OverlayTrigger
-                                  placement="top"
-                                  overlay={
-                                    <Tooltip>
-                                      Poprzednia ocena: {previousArea.score}%
-                                      {area.score !== previousArea.score && (
-                                        <> ({area.score > previousArea.score ? '+' : ''}{area.score - previousArea.score}%)</>
-                                      )}
-                                    </Tooltip>
-                                  }
-                                >
-                                  <span>{getChangeIcon(area.score, previousArea.score)}</span>
-                                </OverlayTrigger>
+                                <div className="d-flex align-items-center">
+                                  {getChangeIcon(area.score, previousArea.score)}
+                                  <small className="ms-1">
+                                    {Math.abs(area.score - previousArea.score)}%
+                                  </small>
+                                </div>
                               )}
                             </div>
                           )}
@@ -466,7 +472,7 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
               </Table>
               
               {editMode && (
-                <div className="d-flex justify-content-end">
+                <div className="d-flex justify-content-end mt-3">
                   <Button 
                     variant="outline-secondary" 
                     onClick={cancelRiskChanges}
@@ -488,141 +494,88 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
         
         {activeTab === 'current' && showComparisonView && comparisonData && (
           <div className="comparison-view">
-            <div className="mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h5>Porównanie ocen ryzyka</h5>
               <Button 
                 variant="outline-secondary" 
                 size="sm"
                 onClick={() => setShowComparisonView(false)}
               >
-                &larr; Powrót do oceny ryzyka
+                Powrót do aktualnej oceny
               </Button>
             </div>
             
-            <h6 className="mb-3">
-              Porównanie oceny ryzyka z dnia {new Date(comparisonData.current.date).toLocaleDateString()} 
-              z oceną z dnia {new Date(comparisonData.previous.date).toLocaleDateString()}
-            </h6>
-            
             <Row className="mb-4">
-              <Col md={5}>
+              <Col md={6}>
                 <Card>
-                  <Card.Header className="bg-light">
-                    <h6 className="mb-0">
-                      Ocena z dnia {new Date(comparisonData.previous.date).toLocaleDateString()}
-                    </h6>
+                  <Card.Header className="bg-primary text-white">
+                    <h6 className="mb-0">Aktualna ocena ({new Date(comparisonData.current.date).toLocaleDateString()})</h6>
                   </Card.Header>
-                  <Card.Body className="text-center">
-                    <div className="risk-score-circle mx-auto mb-3">
-                      <div className={`circle-inner bg-${getScoreColor(comparisonData.previous.overallRisk)}`}>
-                        <span className="risk-score">{comparisonData.previous.overallRisk}%</span>
-                      </div>
+                  <Card.Body>
+                    <div className="text-center mb-3">
+                      <h4>Ogólny poziom ryzyka</h4>
+                      <Badge bg={getScoreColor(comparisonData.current.overallRisk)} className="p-2 fs-5">
+                        {comparisonData.current.overallRisk}%
+                      </Badge>
                     </div>
-                    <Badge bg={getScoreColor(comparisonData.previous.overallRisk)}>
-                      {comparisonData.previous.overallRisk >= 80 ? 'Niskie ryzyko' : 
-                       comparisonData.previous.overallRisk >= 60 ? 'Średnie ryzyko' : 
-                       'Wysokie ryzyko'}
-                    </Badge>
                   </Card.Body>
                 </Card>
               </Col>
-              
-              <Col md={2} className="d-flex align-items-center justify-content-center">
-                <div className="text-center">
-                  {getChangeIcon(comparisonData.current.overallRisk, comparisonData.previous.overallRisk)}
-                  <Badge 
-                    bg={comparisonData.current.overallRisk >= comparisonData.previous.overallRisk ? 'success' : 'danger'}
-                    className="d-block mt-2"
-                  >
-                    {comparisonData.current.overallRisk >= comparisonData.previous.overallRisk ? '+' : ''}
-                    {comparisonData.current.overallRisk - comparisonData.previous.overallRisk}%
-                  </Badge>
-                </div>
-              </Col>
-              
-              <Col md={5}>
+              <Col md={6}>
                 <Card>
-                  <Card.Header className="bg-light">
-                    <h6 className="mb-0">
-                      Aktualna ocena ({new Date(comparisonData.current.date).toLocaleDateString()})
-                    </h6>
+                  <Card.Header className="bg-secondary text-white">
+                    <h6 className="mb-0">Poprzednia ocena ({new Date(comparisonData.previous.date).toLocaleDateString()})</h6>
                   </Card.Header>
-                  <Card.Body className="text-center">
-                    <div className="risk-score-circle mx-auto mb-3">
-                      <div className={`circle-inner bg-${getScoreColor(comparisonData.current.overallRisk)}`}>
-                        <span className="risk-score">{comparisonData.current.overallRisk}%</span>
-                      </div>
+                  <Card.Body>
+                    <div className="text-center mb-3">
+                      <h4>Ogólny poziom ryzyka</h4>
+                      <Badge bg={getScoreColor(comparisonData.previous.overallRisk)} className="p-2 fs-5">
+                        {comparisonData.previous.overallRisk}%
+                      </Badge>
                     </div>
-                    <Badge bg={getScoreColor(comparisonData.current.overallRisk)}>
-                      {comparisonData.current.overallRisk >= 80 ? 'Niskie ryzyko' : 
-                       comparisonData.current.overallRisk >= 60 ? 'Średnie ryzyko' : 
-                       'Wysokie ryzyko'}
-                    </Badge>
                   </Card.Body>
                 </Card>
               </Col>
             </Row>
             
+            <h6>Porównanie ocen dla poszczególnych obszarów</h6>
             <Table striped bordered hover>
               <thead>
                 <tr>
                   <th>Obszar</th>
-                  <th style={{width: '15%'}}>Poprzednia ocena</th>
-                  <th style={{width: '15%'}}>Aktualna ocena</th>
-                  <th style={{width: '15%'}}>Zmiana</th>
-                  <th style={{width: '30%'}}>Komentarz</th>
+                  <th style={{width: '20%'}}>Aktualna ocena</th>
+                  <th style={{width: '20%'}}>Poprzednia ocena</th>
+                  <th style={{width: '20%'}}>Zmiana</th>
                 </tr>
               </thead>
               <tbody>
                 {comparisonData.current.areas.map(currentArea => {
                   const previousArea = comparisonData.previous.areas.find(a => a.id === currentArea.id);
-                  const change = previousArea ? currentArea.score - previousArea.score : null;
+                  if (!previousArea) return null;
+                  
+                  const change = currentArea.score - previousArea.score;
+                  const changeDirection = change > 0 ? 'success' : change < 0 ? 'danger' : 'secondary';
                   
                   return (
                     <tr key={currentArea.id}>
                       <td>{currentArea.name}</td>
-                      <td>
-                        {previousArea ? (
-                          <Badge bg={getScoreColor(previousArea.score)} className="p-2">
-                            {previousArea.score}%
-                          </Badge>
-                        ) : (
-                          <span className="text-muted">Brak danych</span>
-                        )}
-                      </td>
                       <td>
                         <Badge bg={getScoreColor(currentArea.score)} className="p-2">
                           {currentArea.score}%
                         </Badge>
                       </td>
                       <td>
-                        {change !== null ? (
-                          <div className="d-flex align-items-center">
-                            {getChangeIcon(currentArea.score, previousArea.score)}
-                            <Badge 
-                              bg={change > 0 ? 'success' : change < 0 ? 'danger' : 'secondary'}
-                              className="ms-2"
-                            >
-                              {change > 0 ? '+' : ''}{change}%
-                            </Badge>
-                          </div>
-                        ) : (
-                          <span className="text-muted">Brak danych</span>
-                        )}
+                        <Badge bg={getScoreColor(previousArea.score)} className="p-2">
+                          {previousArea.score}%
+                        </Badge>
                       </td>
                       <td>
-                        {change !== null ? (
-                          <small>
-                            {change > 0 ? (
-                              'Poprawa zgodności w tym obszarze.'
-                            ) : change < 0 ? (
-                              'Pogorszenie zgodności w tym obszarze. Zalecane działania naprawcze.'
-                            ) : (
-                              'Brak zmian w tym obszarze.'
-                            )}
-                          </small>
-                        ) : (
-                          <small className="text-muted">Brak danych do porównania.</small>
-                        )}
+                        <div className="d-flex align-items-center">
+                          {getChangeIcon(currentArea.score, previousArea.score)}
+                          <Badge bg={changeDirection} className="ms-2">
+                            {Math.abs(change)}%
+                          </Badge>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -636,66 +589,38 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
           <div className="history-view">
             <h6 className="mb-3">Historia ocen ryzyka</h6>
             
-            <Table striped bordered hover>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th style={{width: '15%'}}>Ogólny poziom ryzyka</th>
-                  <th style={{width: '15%'}}>Zmiana</th>
-                  <th style={{width: '20%'}}>Akcje</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>{new Date(riskData.lastUpdated).toLocaleDateString()}</td>
-                  <td>
-                    <Badge bg={getScoreColor(riskData.overallRisk)} className="p-2">
-                      {riskData.overallRisk}%
-                    </Badge>
-                  </td>
-                  <td>
-                    {riskData.previousAssessments.length > 0 && (
-                      <div className="d-flex align-items-center">
-                        {getChangeIcon(riskData.overallRisk, riskData.previousAssessments[0].overallRisk)}
-                        <Badge 
-                          bg={riskData.overallRisk >= riskData.previousAssessments[0].overallRisk ? 'success' : 'danger'}
-                          className="ms-2"
-                        >
-                          {riskData.overallRisk >= riskData.previousAssessments[0].overallRisk ? '+' : ''}
-                          {riskData.overallRisk - riskData.previousAssessments[0].overallRisk}%
-                        </Badge>
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm"
-                      onClick={() => {
-                        setActiveTab('current');
-                        setShowComparisonView(false);
-                      }}
-                      className="me-2"
-                    >
-                      Szczegóły
-                    </Button>
-                    <Button 
-                      variant="outline-secondary" 
-                      size="sm"
-                      onClick={() => exportToPDF()}
-                    >
-                      <FontAwesomeIcon icon={faDownload} className="me-1" />
-                      Eksportuj
-                    </Button>
-                  </td>
-                </tr>
-                
-                {riskData.previousAssessments.map((assessment, index) => {
-                  const previousAssessment = index < riskData.previousAssessments.length - 1 
-                    ? riskData.previousAssessments[index + 1]
-                    : null;
-                  
-                  return (
+            {riskData.previousAssessments.length > 0 ? (
+              <Table striped bordered hover>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Ogólny poziom ryzyka</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{new Date(riskData.lastUpdated).toLocaleDateString()}</td>
+                    <td>
+                      <Badge bg={getScoreColor(riskData.overallRisk)} className="p-2">
+                        {riskData.overallRisk}%
+                      </Badge>
+                      <span className="ms-2">(Aktualna)</span>
+                    </td>
+                    <td>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={() => {
+                          setActiveTab('current');
+                          setShowComparisonView(false);
+                        }}
+                      >
+                        Szczegóły
+                      </Button>
+                    </td>
+                  </tr>
+                  {riskData.previousAssessments.map((assessment, index) => (
                     <tr key={index}>
                       <td>{new Date(assessment.date).toLocaleDateString()}</td>
                       <td>
@@ -704,104 +629,32 @@ const RiskScoringSystem = ({ assessmentData, onRiskScoreChange }) => {
                         </Badge>
                       </td>
                       <td>
-                        {previousAssessment && (
-                          <div className="d-flex align-items-center">
-                            {getChangeIcon(assessment.overallRisk, previousAssessment.overallRisk)}
-                            <Badge 
-                              bg={assessment.overallRisk >= previousAssessment.overallRisk ? 'success' : 'danger'}
-                              className="ms-2"
-                            >
-                              {assessment.overallRisk >= previousAssessment.overallRisk ? '+' : ''}
-                              {assessment.overallRisk - previousAssessment.overallRisk}%
-                            </Badge>
-                          </div>
-                        )}
-                      </td>
-                      <td>
                         <Button 
                           variant="outline-primary" 
                           size="sm"
                           onClick={() => {
                             setSelectedPreviousAssessment(assessment);
-                            setShowComparisonView(true);
                             setActiveTab('current');
+                            setShowComparisonView(true);
                           }}
                           className="me-2"
                         >
-                          Porównaj
-                        </Button>
-                        <Button 
-                          variant="outline-secondary" 
-                          size="sm"
-                          onClick={() => alert(`Eksport oceny z dnia ${new Date(assessment.date).toLocaleDateString()}`)}
-                        >
-                          <FontAwesomeIcon icon={faDownload} className="me-1" />
-                          Eksportuj
+                          Porównaj z aktualną
                         </Button>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-            
-            <div className="mt-4">
-              <h6>Analiza trendów ryzyka w czasie</h6>
-              <div className="chart-container" style={{ position: 'relative', height: '300px', width: '100%' }}>
-                <div className="text-center p-5 bg-light rounded">
-                  <FontAwesomeIcon icon={faChartBar} size="3x" className="mb-3 text-primary" />
-                  <h4>Wykres trendów ryzyka</h4>
-                  <p className="text-muted">Wykres zostanie wyświetlony po rozwiązaniu problemu z zależnościami.</p>
-                </div>
-              </div>
-            </div>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <Alert variant="info">
+                <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
+                Brak historii ocen ryzyka.
+              </Alert>
+            )}
           </div>
         )}
       </Card.Body>
-      
-      <style jsx>{`
-        .risk-score-circle {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          background-color: #f8f9fa;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .circle-inner {
-          width: 70px;
-          height: 70px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: bold;
-        }
-        
-        .risk-score {
-          font-size: 1.5rem;
-        }
-        
-        .sortable-header {
-          cursor: pointer;
-        }
-        
-        .bg-success {
-          background-color: #28a745;
-        }
-        
-        .bg-warning {
-          background-color: #ffc107;
-        }
-        
-        .bg-danger {
-          background-color: #dc3545;
-        }
-      `}</style>
     </Card>
   );
 };
