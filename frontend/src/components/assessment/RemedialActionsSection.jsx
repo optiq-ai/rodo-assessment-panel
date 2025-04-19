@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Row, Col, Form, Table, Badge, Alert, OverlayTrigger, Tooltip, Tabs, Tab, Dropdown, ButtonGroup, Modal, InputGroup } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardCheck, faExclamationTriangle, faInfoCircle, faDownload, faFilter, faSearch, faSortAmountDown, faSortAmountUp, faFileAlt, faPaperclip, faCalendarAlt, faCheck, faTimes, faEdit, faTrash, faPlus, faFileExport, faListAlt, faTable, faChartBar, faEye, faHistory } from '@fortawesome/free-solid-svg-icons';
@@ -467,439 +467,407 @@ const RemedialActionsSection = ({ assessmentData, onActionStatusChange }) => {
             </Dropdown>
           </Col>
         </Row>
-
+        
         {loading ? (
-          <div className="text-center p-4">
-            <p>Ładowanie działań naprawczych...</p>
+          <div className="text-center py-4">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Ładowanie...</span>
+            </div>
+            <p className="mt-2">Ładowanie działań naprawczych...</p>
           </div>
-        ) : sortedActions.length > 0 ? (
-          <Table striped bordered hover responsive>
-            <thead>
-              <tr>
-                <th style={{width: '30%'}}>
-                  <div 
-                    className="d-flex justify-content-between align-items-center cursor-pointer"
+        ) : sortedActions.length === 0 ? (
+          <Alert variant="info">
+            <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
+            Nie znaleziono działań naprawczych spełniających kryteria wyszukiwania.
+          </Alert>
+        ) : (
+          <div className="table-responsive">
+            <Table hover className="align-middle">
+              <thead>
+                <tr>
+                  <th 
+                    style={{ cursor: 'pointer' }}
                     onClick={() => handleSortChange('title')}
                   >
                     Tytuł
                     {sortField === 'title' && (
                       <FontAwesomeIcon 
-                        icon={sortDirection === 'asc' ? faSortAmountUp : faSortAmountDown} 
-                        size="sm"
+                        icon={sortDirection === 'asc' ? faSortAmountDown : faSortAmountUp} 
+                        className="ms-2"
                       />
                     )}
-                  </div>
-                </th>
-                <th style={{width: '15%'}}>
-                  <div 
-                    className="d-flex justify-content-between align-items-center cursor-pointer"
+                  </th>
+                  <th 
+                    style={{ cursor: 'pointer' }}
                     onClick={() => handleSortChange('priority')}
                   >
                     Priorytet
                     {sortField === 'priority' && (
                       <FontAwesomeIcon 
-                        icon={sortDirection === 'asc' ? faSortAmountUp : faSortAmountDown} 
-                        size="sm"
+                        icon={sortDirection === 'asc' ? faSortAmountDown : faSortAmountUp} 
+                        className="ms-2"
                       />
                     )}
-                  </div>
-                </th>
-                <th style={{width: '15%'}}>
-                  <div 
-                    className="d-flex justify-content-between align-items-center cursor-pointer"
+                  </th>
+                  <th 
+                    style={{ cursor: 'pointer' }}
                     onClick={() => handleSortChange('status')}
                   >
                     Status
                     {sortField === 'status' && (
                       <FontAwesomeIcon 
-                        icon={sortDirection === 'asc' ? faSortAmountUp : faSortAmountDown} 
-                        size="sm"
+                        icon={sortDirection === 'asc' ? faSortAmountDown : faSortAmountUp} 
+                        className="ms-2"
                       />
                     )}
-                  </div>
-                </th>
-                <th style={{width: '15%'}}>
-                  <div 
-                    className="d-flex justify-content-between align-items-center cursor-pointer"
+                  </th>
+                  <th 
+                    style={{ cursor: 'pointer' }}
                     onClick={() => handleSortChange('dueDate')}
                   >
                     Termin
                     {sortField === 'dueDate' && (
                       <FontAwesomeIcon 
-                        icon={sortDirection === 'asc' ? faSortAmountUp : faSortAmountDown} 
-                        size="sm"
+                        icon={sortDirection === 'asc' ? faSortAmountDown : faSortAmountUp} 
+                        className="ms-2"
                       />
                     )}
+                  </th>
+                  <th>Przypisane do</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedActions.map(action => (
+                  <tr key={action.id}>
+                    <td>
+                      {action.title}
+                      {action.attachments.length > 0 && (
+                        <Badge bg="secondary" className="ms-2">
+                          <FontAwesomeIcon icon={faPaperclip} className="me-1" />
+                          {action.attachments.length}
+                        </Badge>
+                      )}
+                    </td>
+                    <td>
+                      <Badge bg={getPriorityColor(action.priority)}>
+                        {action.priority}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge bg={getStatusColor(action.status)}>
+                        {action.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+                        {new Date(action.dueDate).toLocaleDateString()}
+                        {isOverdue(action.dueDate, action.status) && (
+                          <Badge bg="danger" className="ms-2">
+                            <FontAwesomeIcon icon={faExclamationTriangle} className="me-1" />
+                            Przekroczony
+                          </Badge>
+                        )}
+                        {isApproaching(action.dueDate, action.status) && !isOverdue(action.dueDate, action.status) && (
+                          <Badge bg="warning" className="ms-2">
+                            <FontAwesomeIcon icon={faExclamationTriangle} className="me-1" />
+                            Zbliża się
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td>{action.assignedTo}</td>
+                    <td>
+                      <ButtonGroup size="sm">
+                        <Button 
+                          variant="outline-primary"
+                          onClick={() => {
+                            setSelectedAction(action);
+                            setShowActionModal(true);
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faEye} />
+                        </Button>
+                        {action.status !== 'Zakończone' && (
+                          <Button 
+                            variant="outline-success"
+                            onClick={() => handleStatusChange(action.id, 'Zakończone')}
+                          >
+                            <FontAwesomeIcon icon={faCheck} />
+                          </Button>
+                        )}
+                        {action.status === 'Zakończone' && (
+                          <Button 
+                            variant="outline-warning"
+                            onClick={() => handleStatusChange(action.id, 'W trakcie')}
+                          >
+                            <FontAwesomeIcon icon={faEdit} />
+                          </Button>
+                        )}
+                      </ButtonGroup>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
+      </Card.Body>
+      
+      {/* Modal ze szczegółami działania */}
+      <Modal 
+        show={showActionModal} 
+        onHide={() => setShowActionModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {selectedAction?.title}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedAction && (
+            <>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <h6>Szczegóły działania</h6>
+                  <p>{selectedAction.description}</p>
+                  <div className="mb-2">
+                    <strong>Priorytet:</strong>{' '}
+                    <Badge bg={getPriorityColor(selectedAction.priority)}>
+                      {selectedAction.priority}
+                    </Badge>
                   </div>
-                </th>
-                <th style={{width: '15%'}}>Przypisane do</th>
-                <th style={{width: '10%'}}>Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedActions.map(action => (
-                <tr key={action.id}>
-                  <td>
-                    {action.title}
-                    {action.attachments.length > 0 && (
-                      <Badge bg="info" className="ms-2">
-                        <FontAwesomeIcon icon={faPaperclip} className="me-1" />
-                        {action.attachments.length}
+                  <div className="mb-2">
+                    <strong>Status:</strong>{' '}
+                    <Badge bg={getStatusColor(selectedAction.status)}>
+                      {selectedAction.status}
+                    </Badge>
+                  </div>
+                  <div className="mb-2">
+                    <strong>Termin:</strong>{' '}
+                    {new Date(selectedAction.dueDate).toLocaleDateString()}
+                    {isOverdue(selectedAction.dueDate, selectedAction.status) && (
+                      <Badge bg="danger" className="ms-2">
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="me-1" />
+                        Przekroczony
                       </Badge>
                     )}
-                  </td>
-                  <td>
-                    <Badge bg={getPriorityColor(action.priority)}>
-                      {action.priority}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Przypisane do:</strong> {selectedAction.assignedTo}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Obszar:</strong> {selectedAction.area}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Poziom ryzyka:</strong>{' '}
+                    <Badge bg={getPriorityColor(selectedAction.riskLevel)}>
+                      {selectedAction.riskLevel}
                     </Badge>
-                  </td>
-                  <td>
-                    <Badge bg={getStatusColor(action.status)}>
-                      {action.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="d-flex align-items-center">
-                      <FontAwesomeIcon icon={faCalendarAlt} className="me-1" />
-                      <span className={isOverdue(action.dueDate, action.status) ? 'text-danger fw-bold' : ''}>
-                        {new Date(action.dueDate).toLocaleDateString()}
-                      </span>
-                      {isOverdue(action.dueDate, action.status) && (
-                        <Badge bg="danger" className="ms-1">Przekroczony</Badge>
-                      )}
-                      {isApproaching(action.dueDate, action.status) && !isOverdue(action.dueDate, action.status) && (
-                        <Badge bg="warning" className="ms-1">Zbliża się</Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td>{action.assignedTo}</td>
-                  <td>
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm"
-                      onClick={() => {
-                        setSelectedAction(action);
-                        setShowActionModal(true);
-                      }}
-                      className="me-1"
-                    >
-                      <FontAwesomeIcon icon={faEye} />
-                    </Button>
-                    <Dropdown as={ButtonGroup} size="sm">
-                      <Dropdown.Toggle variant="outline-secondary" id={`dropdown-action-${action.id}`}>
-                        <FontAwesomeIcon icon={faEdit} />
-                      </Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        <Dropdown.Header>Zmień status</Dropdown.Header>
-                        <Dropdown.Item 
-                          onClick={() => handleStatusChange(action.id, 'Nowe')}
-                          active={action.status === 'Nowe'}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Artykuły RODO:</strong>{' '}
+                    {selectedAction.gdprArticles.map(article => (
+                      <Badge bg="info" key={article} className="me-1">
+                        Art. {article}
+                      </Badge>
+                    ))}
+                  </div>
+                </Col>
+                <Col md={6}>
+                  <h6>Załączniki</h6>
+                  {selectedAction.attachments.length === 0 ? (
+                    <p className="text-muted">Brak załączników</p>
+                  ) : (
+                    <ul className="list-group">
+                      {selectedAction.attachments.map(attachment => (
+                        <li 
+                          key={attachment.id} 
+                          className="list-group-item d-flex justify-content-between align-items-center"
                         >
-                          Nowe
-                        </Dropdown.Item>
-                        <Dropdown.Item 
-                          onClick={() => handleStatusChange(action.id, 'W trakcie')}
-                          active={action.status === 'W trakcie'}
-                        >
-                          W trakcie
-                        </Dropdown.Item>
-                        <Dropdown.Item 
-                          onClick={() => handleStatusChange(action.id, 'Zakończone')}
-                          active={action.status === 'Zakończone'}
-                        >
-                          Zakończone
-                        </Dropdown.Item>
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : (
-          <Alert variant="info">
-            <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
-            Brak działań naprawczych spełniających kryteria wyszukiwania.
-          </Alert>
-        )}
-
-        {/* Modal ze szczegółami działania */}
-        <Modal 
-          show={showActionModal} 
-          onHide={() => setShowActionModal(false)}
-          size="lg"
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Szczegóły działania naprawczego</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {selectedAction && (
-              <>
-                <h5>{selectedAction.title}</h5>
-                <div className="d-flex mb-3">
-                  <Badge bg={getPriorityColor(selectedAction.priority)} className="me-2">
-                    Priorytet: {selectedAction.priority}
-                  </Badge>
-                  <Badge bg={getStatusColor(selectedAction.status)} className="me-2">
-                    Status: {selectedAction.status}
-                  </Badge>
-                  <Badge bg="info">
-                    Obszar: {selectedAction.area}
-                  </Badge>
-                </div>
-                
-                <Row className="mb-3">
-                  <Col md={6}>
-                    <p className="mb-1"><strong>Termin:</strong> {new Date(selectedAction.dueDate).toLocaleDateString()}</p>
-                    <p className="mb-1"><strong>Przypisane do:</strong> {selectedAction.assignedTo}</p>
-                    <p className="mb-1"><strong>Utworzono:</strong> {new Date(selectedAction.createdAt).toLocaleDateString()}</p>
-                    <p className="mb-1"><strong>Aktualizacja:</strong> {new Date(selectedAction.updatedAt).toLocaleDateString()}</p>
-                  </Col>
-                  <Col md={6}>
-                    <p className="mb-1"><strong>Poziom ryzyka:</strong> {selectedAction.riskLevel}</p>
-                    <p className="mb-1">
-                      <strong>Artykuły RODO:</strong> {selectedAction.gdprArticles.map(article => (
-                        <Badge bg="secondary" className="me-1" key={article}>Art. {article}</Badge>
-                      ))}
-                    </p>
-                  </Col>
-                </Row>
-                
-                <div className="mb-3">
-                  <h6>Opis</h6>
-                  <p>{selectedAction.description}</p>
-                </div>
-                
-                <Tabs defaultActiveKey="attachments" className="mb-3">
-                  <Tab 
-                    eventKey="attachments" 
-                    title={
-                      <span>
-                        <FontAwesomeIcon icon={faPaperclip} className="me-1" />
-                        Załączniki ({selectedAction.attachments.length})
-                      </span>
-                    }
-                  >
-                    <div className="mb-3">
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => setShowAttachmentModal(true)}
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="me-1" />
-                        Dodaj załącznik
-                      </Button>
-                    </div>
-                    
-                    {selectedAction.attachments.length > 0 ? (
-                      <Table striped bordered hover size="sm">
-                        <thead>
-                          <tr>
-                            <th>Nazwa</th>
-                            <th>Typ</th>
-                            <th>Data dodania</th>
-                            <th>Akcje</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedAction.attachments.map(attachment => (
-                            <tr key={attachment.id}>
-                              <td>
-                                <FontAwesomeIcon 
-                                  icon={attachment.type === 'document' ? faFileAlt : faFileAlt} 
-                                  className="me-1"
-                                />
-                                {attachment.name}
-                              </td>
-                              <td>{attachment.type}</td>
-                              <td>{new Date(attachment.uploadedAt).toLocaleDateString()}</td>
-                              <td>
-                                <Button variant="outline-primary" size="sm" className="me-1">
-                                  <FontAwesomeIcon icon={faDownload} />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    ) : (
-                      <Alert variant="info">
-                        <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
-                        Brak załączników dla tego działania.
-                      </Alert>
-                    )}
-                  </Tab>
-                  <Tab 
-                    eventKey="comments" 
-                    title={
-                      <span>
-                        <FontAwesomeIcon icon={faFileAlt} className="me-1" />
-                        Komentarze ({selectedAction.comments.length})
-                      </span>
-                    }
-                  >
-                    <div className="mb-3">
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => setShowCommentModal(true)}
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="me-1" />
-                        Dodaj komentarz
-                      </Button>
-                    </div>
-                    
-                    {selectedAction.comments.length > 0 ? (
-                      <div>
-                        {selectedAction.comments.map(comment => (
-                          <div key={comment.id} className="p-3 mb-2 border rounded">
-                            <div className="d-flex justify-content-between mb-2">
-                              <strong>{comment.user}</strong>
-                              <small>{new Date(comment.date).toLocaleDateString()}</small>
-                            </div>
-                            <p className="mb-0">{comment.text}</p>
+                          <div>
+                            <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                            {attachment.name}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <Alert variant="info">
-                        <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
-                        Brak komentarzy dla tego działania.
-                      </Alert>
-                    )}
-                  </Tab>
-                  <Tab 
-                    eventKey="history" 
-                    title={
-                      <span>
-                        <FontAwesomeIcon icon={faHistory} className="me-1" />
-                        Historia statusów
-                      </span>
-                    }
+                          <small className="text-muted">
+                            {new Date(attachment.uploadedAt).toLocaleDateString()}
+                          </small>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => setShowAttachmentModal(true)}
                   >
-                    {selectedAction.statusHistory.length > 0 ? (
-                      <Table striped bordered hover size="sm">
-                        <thead>
-                          <tr>
-                            <th>Data</th>
-                            <th>Status</th>
-                            <th>Użytkownik</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...selectedAction.statusHistory].reverse().map((history, index) => (
-                            <tr key={index}>
-                              <td>{new Date(history.date).toLocaleDateString()}</td>
-                              <td>
-                                <Badge bg={getStatusColor(history.status)}>
-                                  {history.status}
-                                </Badge>
-                              </td>
-                              <td>{history.user}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    ) : (
-                      <Alert variant="info">
-                        <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
-                        Brak historii statusów dla tego działania.
-                      </Alert>
-                    )}
-                  </Tab>
-                </Tabs>
-              </>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowActionModal(false)}>
-              Zamknij
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Modal dodawania komentarza */}
-        <Modal 
-          show={showCommentModal} 
-          onHide={() => setShowCommentModal(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Dodaj komentarz</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group>
-              <Form.Label>Treść komentarza</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Wprowadź treść komentarza..."
-              />
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowCommentModal(false)}>
-              Anuluj
-            </Button>
-            <Button variant="primary" onClick={handleAddComment}>
-              Dodaj komentarz
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Modal dodawania załącznika */}
-        <Modal 
-          show={showAttachmentModal} 
-          onHide={() => setShowAttachmentModal(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Dodaj załącznik</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label>Nazwa załącznika</Form.Label>
-              <Form.Control
-                type="text"
-                value={newAttachment.name}
-                onChange={(e) => setNewAttachment({...newAttachment, name: e.target.value})}
-                placeholder="Wprowadź nazwę załącznika..."
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Typ załącznika</Form.Label>
-              <Form.Select
-                value={newAttachment.type}
-                onChange={(e) => setNewAttachment({...newAttachment, type: e.target.value})}
+                    <FontAwesomeIcon icon={faPlus} className="me-1" />
+                    Dodaj załącznik
+                  </Button>
+                  
+                  <h6 className="mt-4">Historia statusów</h6>
+                  <ul className="list-group">
+                    {selectedAction.statusHistory.map((history, index) => (
+                      <li 
+                        key={index} 
+                        className="list-group-item d-flex justify-content-between align-items-center"
+                      >
+                        <div>
+                          <Badge bg={getStatusColor(history.status)} className="me-2">
+                            {history.status}
+                          </Badge>
+                          {history.user}
+                        </div>
+                        <small className="text-muted">
+                          {new Date(history.date).toLocaleDateString()}
+                        </small>
+                      </li>
+                    ))}
+                  </ul>
+                </Col>
+              </Row>
+              
+              <h6 className="mt-3">Komentarze</h6>
+              {selectedAction.comments.length === 0 ? (
+                <p className="text-muted">Brak komentarzy</p>
+              ) : (
+                <div className="comments-section">
+                  {selectedAction.comments.map(comment => (
+                    <div key={comment.id} className="card mb-2">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between">
+                          <h6 className="card-subtitle mb-2 text-muted">{comment.user}</h6>
+                          <small className="text-muted">
+                            {new Date(comment.date).toLocaleDateString()}
+                          </small>
+                        </div>
+                        <p className="card-text">{comment.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button 
+                variant="outline-primary" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => setShowCommentModal(true)}
               >
-                <option value="document">Dokument</option>
-                <option value="image">Obraz</option>
-                <option value="spreadsheet">Arkusz kalkulacyjny</option>
-                <option value="presentation">Prezentacja</option>
-                <option value="other">Inny</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mt-3">
-              <Form.Label>Plik</Form.Label>
-              <Form.Control
-                type="file"
-                disabled
-              />
-              <Form.Text className="text-muted">
-                Funkcja przesyłania plików będzie dostępna w pełnej wersji aplikacji.
-              </Form.Text>
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowAttachmentModal(false)}>
-              Anuluj
+                <FontAwesomeIcon icon={faPlus} className="me-1" />
+                Dodaj komentarz
+              </Button>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {selectedAction && selectedAction.status !== 'Zakończone' && (
+            <Button 
+              variant="success" 
+              onClick={() => {
+                handleStatusChange(selectedAction.id, 'Zakończone');
+                setShowActionModal(false);
+              }}
+            >
+              <FontAwesomeIcon icon={faCheck} className="me-1" />
+              Oznacz jako zakończone
             </Button>
-            <Button variant="primary" onClick={handleAddAttachment}>
-              Dodaj załącznik
+          )}
+          {selectedAction && selectedAction.status === 'Zakończone' && (
+            <Button 
+              variant="warning" 
+              onClick={() => {
+                handleStatusChange(selectedAction.id, 'W trakcie');
+                setShowActionModal(false);
+              }}
+            >
+              <FontAwesomeIcon icon={faEdit} className="me-1" />
+              Przywróć do realizacji
             </Button>
-          </Modal.Footer>
-        </Modal>
-      </Card.Body>
+          )}
+          <Button variant="secondary" onClick={() => setShowActionModal(false)}>
+            Zamknij
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Modal dodawania komentarza */}
+      <Modal 
+        show={showCommentModal} 
+        onHide={() => setShowCommentModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Dodaj komentarz</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Treść komentarza</Form.Label>
+            <Form.Control 
+              as="textarea" 
+              rows={3}
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCommentModal(false)}>
+            Anuluj
+          </Button>
+          <Button variant="primary" onClick={handleAddComment}>
+            Dodaj komentarz
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Modal dodawania załącznika */}
+      <Modal 
+        show={showAttachmentModal} 
+        onHide={() => setShowAttachmentModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Dodaj załącznik</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Nazwa pliku</Form.Label>
+            <Form.Control 
+              type="text"
+              value={newAttachment.name}
+              onChange={(e) => setNewAttachment({...newAttachment, name: e.target.value})}
+            />
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>Typ pliku</Form.Label>
+            <Form.Select
+              value={newAttachment.type}
+              onChange={(e) => setNewAttachment({...newAttachment, type: e.target.value})}
+            >
+              <option value="document">Dokument</option>
+              <option value="image">Obraz</option>
+              <option value="spreadsheet">Arkusz kalkulacyjny</option>
+              <option value="presentation">Prezentacja</option>
+              <option value="other">Inny</option>
+            </Form.Select>
+          </Form.Group>
+          <div className="mt-3">
+            <p className="text-muted small">
+              <FontAwesomeIcon icon={faInfoCircle} className="me-1" />
+              W tej wersji demonstracyjnej załączniki są tylko symulowane. Funkcja przesyłania plików będzie dostępna w pełnej wersji.
+            </p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowAttachmentModal(false)}>
+            Anuluj
+          </Button>
+          <Button variant="primary" onClick={handleAddAttachment}>
+            Dodaj załącznik
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Card>
   );
 };
