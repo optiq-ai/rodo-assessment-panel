@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Row, Col, Form, Table, Badge, Alert, OverlayTrigger, Tooltip, Tabs, Tab, Dropdown, ButtonGroup, Modal, InputGroup } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClipboardCheck, faExclamationTriangle, faInfoCircle, faDownload, faFilter, faSearch, faSortAmountDown, faSortAmountUp, faFileAlt, faPaperclip, faCalendarAlt, faCheck, faTimes, faEdit, faTrash, faPlus, faFileExport, faListAlt, faTable, faChartBar } from '@fortawesome/free-solid-svg-icons';
+import { faClipboardCheck, faExclamationTriangle, faInfoCircle, faDownload, faFilter, faSearch, faSortAmountDown, faSortAmountUp, faFileAlt, faPaperclip, faCalendarAlt, faCheck, faTimes, faEdit, faTrash, faPlus, faFileExport, faListAlt, faTable, faChartBar, faHistory } from '@fortawesome/free-solid-svg-icons';
 // Komentujemy import bibliotek PDF i CSV do czasu rozwiązania problemu z zależnościami
 // import jsPDF from 'jspdf';
 // import 'jspdf-autotable';
